@@ -1,10 +1,17 @@
 # stdlib
 from datetime import datetime
+from enum import StrEnum
 from uuid import UUID, uuid4
 
 # thirdparty
 from beanie import Document
 from pydantic import Field, field_validator
+
+
+class Status(StrEnum):
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    PENDING = "pending"
 
 
 class Review(Document):
@@ -14,6 +21,7 @@ class Review(Document):
     title: str
     review_text: str
     rating: int = 0
+    status: Status = Status.PENDING
     created_at: datetime = Field(default_factory=datetime.now)
 
     class Settings:

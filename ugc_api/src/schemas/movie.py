@@ -6,13 +6,6 @@ from uuid import UUID
 from pydantic import BaseModel
 
 
-class Movie(BaseModel):
-    id: UUID
-    title: str
-    rating: int
-    created_at: datetime
-
-
 class AdditionalInfo(BaseModel):
     reactions_count: int
     likes_count: int

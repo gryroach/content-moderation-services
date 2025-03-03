@@ -13,7 +13,7 @@ from starlette import status
 # project
 from api.v1.pagination import PaginationParams
 from schemas.auth import JwtToken
-from schemas.review import CreateReview, CreateReviewData, Review
+from schemas.review import CreateReview, CreateReviewData
 from services.jwt_token import JWTBearer
 from services.repositories.reviews import ReviewRepository
 
@@ -33,7 +33,7 @@ class ReviewSortParams(BaseModel):
 
 @router.get(
     "/",
-    response_model=list[Review],
+    response_model=list[ReviewDocument],
     status_code=status.HTTP_200_OK,
     description="Получение списка рецензий",
     summary="Получение списка рецензий",
@@ -64,7 +64,7 @@ async def get_reviews(
 
 @router.get(
     "/{review_id}",
-    response_model=Review,
+    response_model=ReviewDocument,
     status_code=status.HTTP_200_OK,
     description="Получение рецензии",
     summary="Получение рецензии",
@@ -72,14 +72,13 @@ async def get_reviews(
 async def get_review(
     review_id: UUID,
     review_repo: Annotated[ReviewRepository, Depends()],
-) -> Review:
-    review = await review_repo.get(document_id=review_id)
-    return Review(**review.model_dump())
+) -> ReviewDocument:
+    return await review_repo.get(document_id=review_id)
 
 
 @router.post(
     "/",
-    response_model=Review,
+    response_model=ReviewDocument,
     status_code=status.HTTP_201_CREATED,
     description="Создание рецензии",
     summary="Создание рецензии",
@@ -88,9 +87,8 @@ async def create_review(
     review_data: CreateReviewData,
     token_payload: Annotated[JwtToken, Depends(JWTBearer())],
     review_repo: Annotated[ReviewRepository, Depends()],
-) -> Review:
-    review = await review_repo.create(CreateReview(**review_data.model_dump(), user_id=token_payload.user))
-    return Review(**review.model_dump())
+) -> ReviewDocument:
+    return await review_repo.create(CreateReview(**review_data.model_dump(), user_id=token_payload.user))
 
 
 @router.delete(
