@@ -1,0 +1,88 @@
+[project]
+name = "content-moderation-service"
+version = "0.1.0"
+description = "Content moderation service"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "isort>=6.0.0",
+    "mypy>=1.15.0",
+    "pre-commit>=4.1.0",
+    "pyjwt[crypto]>=2.10.1",
+    "ruff>=0.9.5",
+    "sqlalchemy[mypy]>=2.0.38",
+]
+
+[tool.uv.workspace]
+members = ["manual_moderation_service", "automated_moderation_service", "ugc_api"]
+
+[tool.ruff]
+exclude = [".venv"]
+line-length = 119
+indent-width = 4
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "RUF", # ruff-specific rules
+    "TID", # flake8-tidy-imports
+    "TCH", # flake8-type-checking
+    "PTH", # flake8-use-pathlib
+    "PL",  # pylint
+]
+ignore = [
+    "RUF001", # Игнорируем проверку кириллицы в строках
+    "RUF002", # Игнорируем проверку кириллицы в докстрингах
+    "RUF003", # Игнорируем проверку кириллицы в комментариях
+    "I001",   # Игнорируем проверку сортировки импортов, так как используем isort
+    "B904",   # Игнорируем проверку наличия from при raise в обработчиках исключений
+]
+mccabe = { max-complexity = 10 }
+pydocstyle = { convention = "google" }
+pylint = { max-args = 8 }
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+plugins = ["sqlalchemy.ext.mypy.plugin"]
+namespace_packages = true
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+line_length = 79
+skip = [".venv"]
+combine_as_imports = true
+sections = ["STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+known_first_party = [
+    "api",
+    "core",
+    "db",
+    "enums",
+    "exceptions",
+    "handlers",
+    "main",
+    "middlewares",
+    "models",
+    "repositories",
+    "schemas",
+    "services",
+    "workers",
+]
+known_third_party = ["sqlalchemy", "pydantic", "asyncpg", "croniter", "alembic"]
+import_heading_stdlib = "stdlib"
+import_heading_thirdparty = "thirdparty"
+import_heading_firstparty = "project"
