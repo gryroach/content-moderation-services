@@ -5,6 +5,7 @@ from uuid import UUID
 # thirdparty
 from beanie import Document
 from beanie.odm.enums import SortDirection
+from beanie.odm.operators.update.general import Set
 from documents.reaction import LikeValue
 from pydantic import BaseModel
 
@@ -32,7 +33,7 @@ class BaseRepository(Generic[DocumentType, CreateSchemaType, UpdateSchemaType]):
 
     async def update(self, document_id: UUID, update_data: UpdateSchemaType) -> DocumentType:
         document = await self.get(document_id)
-        await document.update(update_data.model_dump())
+        await document.update(Set(update_data.model_dump()))  # type: ignore
         return document
 
     async def delete(self, document_id: UUID) -> None:

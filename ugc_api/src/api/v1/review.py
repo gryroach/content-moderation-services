@@ -13,7 +13,12 @@ from starlette import status
 # project
 from api.v1.pagination import PaginationParams
 from schemas.auth import JwtToken
-from schemas.review import CreateReview, CreateReviewData
+from schemas.review import (
+    CreateReview,
+    CreateReviewData,
+    StatusUpdate,
+    UpdateReview,
+)
 from services.jwt_token import JWTBearer
 from services.repositories.reviews import ReviewRepository
 
@@ -109,3 +114,33 @@ async def delete_review(
             detail="You can delete only your review",
         )
     await review.delete()
+
+
+@router.patch(
+    "/{review_id}/status",
+    response_model=ReviewDocument,
+    status_code=status.HTTP_200_OK,
+    description="Изменение статуса рецензии",
+    summary="Изменение статуса рецензии",
+)
+async def change_review_satus(
+    review_id: UUID,
+    status_update: StatusUpdate,
+    token_payload: Annotated[JwtToken, Depends(JWTBearer())],
+    review_repo: Annotated[ReviewRepository, Depends()],
+) -> ReviewDocument:
+    if token_payload.role != "moderator":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can't change the review status",
+        )
+    review = await review_repo.get(document_id=review_id)
+    review_update_data = UpdateReview(
+        movie_id=review.movie_id,
+        user_id=review.user_id,
+        title=review.title,
+        review_text=review.review_text,
+        status=status_update.status,
+    )
+    review.status = status_update.status
+    return await review_repo.update(document_id=review_id, update_data=review_update_data)

@@ -32,7 +32,7 @@ class JWTService:
             "session_version": 1,
             "iat": now,
             "exp": now + timedelta(days=TOKEN_EXPIRE_DAYS),
-            "role": "regular_user",
+            "role": "moderator",
             "type": "access",
         }
         jwt_token = self._create_token(payload)
