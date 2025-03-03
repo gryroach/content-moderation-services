@@ -31,8 +31,8 @@ class BaseRepository(Generic[DocumentType, CreateSchemaType, UpdateSchemaType]):
             raise DocumentNotFoundException(f"Not found. {self.model.Settings.name}: {document_id}")
         return document
 
-    async def update(self, document_id: UUID, update_data: UpdateSchemaType) -> DocumentType:
-        document = await self.get(document_id)
+    async def update(self, document: UUID | DocumentType, update_data: UpdateSchemaType) -> DocumentType:
+        document = await self.get(document) if isinstance(document, UUID) else document
         await document.update(Set(update_data.model_dump()))  # type: ignore
         return document
 

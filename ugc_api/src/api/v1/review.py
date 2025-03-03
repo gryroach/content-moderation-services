@@ -47,11 +47,16 @@ async def get_reviews(
     review_repo: Annotated[ReviewRepository, Depends()],
     pagination_params: Annotated[PaginationParams, Depends()],
     sort_params: Annotated[ReviewSortParams, Depends()],
+    token_payload: Annotated[JwtToken, Depends(JWTBearer(auto_error=False))],
     movie_id: Annotated[UUID | None, Query(description="Фильтр по фильму")] = None,
     user_id: Annotated[UUID | None, Query(description="Фильтр по пользователю")] = None,
     rating__gte: Annotated[int | None, Query(description="Фильтр по рейтингу рецензии (больше или равно)")] = None,
     rating__lte: Annotated[int | None, Query(description="Фильтр по рейтингу рецензии (меньше или равно)")] = None,
 ) -> list[ReviewDocument]:
+    request_user = None
+    if token_payload is not None:
+        request_user = token_payload.user
+
     filters = {
         "movie_id": movie_id,
         "user_id": user_id,
@@ -64,6 +69,7 @@ async def get_reviews(
         sort_field=sort_params.order_by,
         sort_order=sort_params.direction,
         filters=filters,
+        request_user=request_user,
     )
 
 
@@ -77,8 +83,12 @@ async def get_reviews(
 async def get_review(
     review_id: UUID,
     review_repo: Annotated[ReviewRepository, Depends()],
+    token_payload: Annotated[JwtToken, Depends(JWTBearer(auto_error=False))],
 ) -> ReviewDocument:
-    return await review_repo.get(document_id=review_id)
+    request_user = None
+    if token_payload is not None:
+        request_user = token_payload.user
+    return await review_repo.get(document_id=review_id, request_user=request_user)
 
 
 @router.post(
@@ -107,7 +117,7 @@ async def delete_review(
     token_payload: Annotated[JwtToken, Depends(JWTBearer())],
     review_repo: Annotated[ReviewRepository, Depends()],
 ) -> None:
-    review = await review_repo.get(document_id=review_id)
+    review: ReviewDocument = await review_repo.get(document_id=review_id, request_user=token_payload.user)
     if review.user_id != token_payload.user:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -134,7 +144,7 @@ async def change_review_satus(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can't change the review status",
         )
-    review = await review_repo.get(document_id=review_id)
+    review: ReviewDocument = await review_repo.get(document_id=review_id, get_all=True)
     review_update_data = UpdateReview(
         movie_id=review.movie_id,
         user_id=review.user_id,
@@ -142,5 +152,4 @@ async def change_review_satus(
         review_text=review.review_text,
         status=status_update.status,
     )
-    review.status = status_update.status
-    return await review_repo.update(document_id=review_id, update_data=review_update_data)
+    return await review_repo.update(document=review, update_data=review_update_data)
