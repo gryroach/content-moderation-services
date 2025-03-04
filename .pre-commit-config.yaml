@@ -5,11 +5,15 @@ repos:
     rev: v2.3.0
     hooks:
       - id: check-ast
+        exclude: research/
       - id: check-case-conflict
+        exclude: research/
       - id: check-merge-conflict
+        exclude: research/
       - id: end-of-file-fixer
-        exclude: notification_service/src/db/migrations/
-        exclude_types: [svg, css, html, less, javascript, json, coffee, map, markdown, pem]
+        exclude: notification_service/src/db/migrations/|research/
+        exclude_types:
+          [svg, css, html, less, javascript, json, coffee, map, markdown, pem]
 
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2
@@ -17,7 +21,7 @@ repos:
       - id: isort
         name: isort
         args: ["--profile", "black", "--filter-files"]
-        exclude: notification_service/src/db/migrations/
+        exclude: notification_service/src/db/migrations/|research/
 
   - repo: local
     hooks:
@@ -25,19 +29,19 @@ repos:
         name: ruff format
         entry: .venv/bin/ruff
         language: python
-        types: [ python ]
-        args: [ format ]
-        exclude: notification_service/src/db/migrations/
+        types: [python]
+        args: [format]
+        exclude: notification_service/src/db/migrations/|research/
         require_serial: false
-        additional_dependencies: [ ]
+        additional_dependencies: []
 
       - id: ruff_lint
         name: ruff lint
         entry: .venv/bin/ruff
         language: python
-        types: [ python ]
-        args: [ check ]
-        exclude: notification_service/src/db/migrations/
+        types: [python]
+        args: [check]
+        exclude: notification_service/src/db/migrations/|research/
         require_serial: false
         additional_dependencies: []
 
@@ -45,7 +49,8 @@ repos:
         name: mypy
         entry: .venv/bin/mypy
         language: python
-        types: [ python ]
+        types: [python]
         args: [--config-file, pyproject.toml]
+        exclude: notification_service/src/db/migrations/|research/
         require_serial: false
         additional_dependencies: []
