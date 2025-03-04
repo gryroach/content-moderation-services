@@ -13,12 +13,7 @@ from starlette import status
 # project
 from api.v1.pagination import PaginationParams
 from schemas.auth import JwtToken
-from schemas.bookmark import (
-    Bookmark,
-    BookmarkCreateRequest,
-    BookmarkCreateResponse,
-    CreateBookmark,
-)
+from schemas.bookmark import BookmarkCreateRequest, CreateBookmark
 from services.jwt_token import JWTBearer
 from services.repositories.bookmarks import BookmarkRepository
 from services.repositories.movies import MovieRepository
@@ -37,7 +32,7 @@ class BookmarkSortParams(BaseModel):
 
 @router.get(
     "/",
-    response_model=list[Bookmark],
+    response_model=list[BookmarkDocument],
     status_code=status.HTTP_200_OK,
     description="Получение списка закладок пользователя",
     summary="Получение списка закладок",
@@ -59,7 +54,7 @@ async def get_bookmarks(
 
 @router.get(
     "/{bookmark_id}",
-    response_model=Bookmark,
+    response_model=BookmarkDocument,
     status_code=status.HTTP_200_OK,
     description="Получение закладки пользователя",
     summary="Получение закладки",
@@ -68,14 +63,13 @@ async def get_bookmark(
     bookmark_id: UUID,
     bookmark_repo: Annotated[BookmarkRepository, Depends()],
     token_payload: Annotated[JwtToken, Depends(JWTBearer())],
-) -> Bookmark:
-    bookmark = await bookmark_repo.get(document_id=bookmark_id, filters={"user_id": token_payload.user})
-    return Bookmark(**bookmark.model_dump())
+) -> BookmarkDocument:
+    return await bookmark_repo.get(document_id=bookmark_id, filters={"user_id": token_payload.user})
 
 
 @router.post(
     "/",
-    response_model=BookmarkCreateResponse,
+    response_model=BookmarkDocument,
     status_code=status.HTTP_201_CREATED,
     description="Создание закладки для пользователя",
     summary="Создание закладки",
@@ -85,12 +79,9 @@ async def create_bookmark(
     token_payload: Annotated[JwtToken, Depends(JWTBearer())],
     bookmark_repo: Annotated[BookmarkRepository, Depends()],
     movie_repo: Annotated[MovieRepository, Depends()],
-) -> BookmarkCreateResponse:
+) -> BookmarkDocument:
     await movie_repo.get(bookmark_data.movie_id)
-    bookmark = await bookmark_repo.get_or_create(
-        CreateBookmark(**bookmark_data.model_dump(), user_id=token_payload.user)
-    )
-    return BookmarkCreateResponse(**bookmark.model_dump())
+    return await bookmark_repo.get_or_create(CreateBookmark(**bookmark_data.model_dump(), user_id=token_payload.user))
 
 
 @router.delete(

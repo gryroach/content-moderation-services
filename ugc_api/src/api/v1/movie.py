@@ -12,7 +12,7 @@ from starlette import status
 
 # project
 from api.v1.pagination import PaginationParams
-from schemas.movie import CreateMovie, Movie, MovieDetail
+from schemas.movie import CreateMovie, MovieDetail
 from services.jwt_token import JWTBearer
 from services.repositories.movies import MovieRepository
 
@@ -31,7 +31,7 @@ class MovieSortParams(BaseModel):
 
 @router.get(
     "/",
-    response_model=list[Movie],
+    response_model=list[MovieDocument],
     status_code=status.HTTP_200_OK,
     description="Получение списка фильмов",
     summary="Получение списка фильмов",
@@ -73,7 +73,7 @@ async def get_review(
 
 @router.post(
     "/",
-    response_model=Movie,
+    response_model=MovieDocument,
     status_code=status.HTTP_201_CREATED,
     description="Создание записи фильма",
     summary="Создание записи фильма",
@@ -82,6 +82,5 @@ async def get_review(
 async def create_reviews(
     movie_data: CreateMovie,
     movie_repo: Annotated[MovieRepository, Depends()],
-) -> Movie:
-    movie = await movie_repo.create(movie_data)
-    return Movie(**movie.model_dump())
+) -> MovieDocument:
+    return await movie_repo.create(movie_data)

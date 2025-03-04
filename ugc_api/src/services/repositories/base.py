@@ -5,6 +5,7 @@ from uuid import UUID
 # thirdparty
 from beanie import Document
 from beanie.odm.enums import SortDirection
+from beanie.odm.operators.update.general import Set
 from documents.reaction import LikeValue
 from pydantic import BaseModel
 
@@ -30,9 +31,9 @@ class BaseRepository(Generic[DocumentType, CreateSchemaType, UpdateSchemaType]):
             raise DocumentNotFoundException(f"Not found. {self.model.Settings.name}: {document_id}")
         return document
 
-    async def update(self, document_id: UUID, update_data: UpdateSchemaType) -> DocumentType:
-        document = await self.get(document_id)
-        await document.update(update_data.model_dump())
+    async def update(self, document: UUID | DocumentType, update_data: UpdateSchemaType) -> DocumentType:
+        document = await self.get(document) if isinstance(document, UUID) else document
+        await document.update(Set(update_data.model_dump()))  # type: ignore
         return document
 
     async def delete(self, document_id: UUID) -> None:
