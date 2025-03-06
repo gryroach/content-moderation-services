@@ -5,9 +5,9 @@ from uuid import UUID, uuid4
 
 # thirdparty
 from bson import Binary
-from documents.reaction import ContentType, LikeValue, Reaction
 
 # project
+from documents.reaction import ContentType, LikeValue, Reaction
 from schemas.reaction import CreateReaction, UpdateReaction
 from services.repositories.base import BaseRepository
 

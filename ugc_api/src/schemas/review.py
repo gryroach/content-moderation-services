@@ -2,8 +2,10 @@
 from uuid import UUID
 
 # thirdparty
-from documents.review import Status
 from pydantic import BaseModel
+
+# project
+from documents.review import Status
 
 
 class CreateReview(BaseModel):

@@ -3,8 +3,10 @@ from http import HTTPStatus
 from uuid import UUID
 
 # thirdparty
-from documents.bookmark import Bookmark as BookmarkDocument
 from fastapi.testclient import TestClient
+
+# project
+from documents.bookmark import Bookmark as BookmarkDocument
 
 UNPROCESSABLE_ENTITY = 422
 

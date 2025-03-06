@@ -4,11 +4,11 @@ from uuid import UUID
 
 # thirdparty
 from bson import Binary
+
+# project
 from documents.bookmark import Bookmark
 from documents.reaction import ContentType, LikeValue, Reaction
 from documents.review import Review
-
-# project
 from services.repositories.base import RatingRepository
 from services.repositories.reactions import get_reaction_repository
 

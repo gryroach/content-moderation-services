@@ -5,13 +5,13 @@ from uuid import UUID
 
 # thirdparty
 from beanie.odm.enums import SortDirection
-from documents.movie import Movie as MovieDocument
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from starlette import status
 
 # project
 from api.v1.pagination import PaginationParams
+from documents.movie import Movie as MovieDocument
 from schemas.movie import CreateMovie, MovieDetail
 from services.jwt_token import JWTBearer
 from services.repositories.movies import MovieRepository

@@ -1,5 +1,31 @@
 version: '3.4'
 
+x-mongo-defaults: &mongo-defaults
+  image: mongo
+  restart: always
+  expose:
+    - "27017"
+  volumes:
+    - /etc/localtime:/etc/localtime:ro
+  healthcheck:
+    test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+    interval: 5s
+    timeout: 5s
+    retries: 3
+    start_period: 5s
+
+x-mongos-defaults: &mongos-defaults
+  image: mongo
+  restart: always
+  command: mongos --configdb mongors1conf/mongocfg1:27017,mongocfg2:27017,mongocfg3:27017 --port 27017 --bind_ip_all
+  expose:
+    - "27017"
+  volumes:
+    - /etc/localtime:/etc/localtime:ro
+  depends_on:
+    - mongocfg1
+    - mongocfg2
+
 services:
   nginx:
     image: nginx:latest
@@ -8,6 +34,8 @@ services:
     volumes:
       - ./configs/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./configs/nginx/sites:/etc/nginx/conf.d:ro
+      - moderator_static_volume:/opt/app/static
+      - moderator_media_volume:/opt/app/media
     ports:
       - "80:80"
     depends_on:
@@ -29,6 +57,25 @@ services:
     depends_on:
       - mongos1
 
+  moderator-admin:
+    build:
+      context: .
+      dockerfile: ./manual_moderation_service/Dockerfile
+    container_name: moderator_admin
+    restart: always
+    volumes:
+      - moderator_static_volume:/app/static
+      - moderator_media_volume:/app/media
+    env_file:
+      - ./.env
+    ports:
+      - "8020:8000"
+    expose:
+      - "8000"
+    depends_on:
+      moderator-db:
+        condition: service_healthy
+
   ugc-api-test:
     build:
       context: .
@@ -42,200 +89,127 @@ services:
     volumes:
       - ./ugc_api/src:/app/src
 
+  # Shard 1
   mongors1n1:
+    <<: *mongo-defaults
     container_name: mongors1n1
-    image: mongo
-    restart: always
     ports:
-      - 27017:27017
-    expose:
-      - "27017"
+      - "27017:27017"
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ./mongodb/init-shard1.js:/docker-entrypoint-initdb.d/init-shard1.js
       - mongo_data1:/data/db
     command: mongod --shardsvr --replSet mongors1 --dbpath /data/db --port 27017
-    healthcheck:
-      test: ["CMD","mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
 
   mongors1n2:
+    <<: *mongo-defaults
     container_name: mongors1n2
-    image: mongo
-    restart: always
-    command: mongod --shardsvr --replSet mongors1 --dbpath /data/db --port 27017
-    expose:
-      - "27017"
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - mongo_data2:/data/db
-    healthcheck:
-      test: ["CMD","mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
+    command: mongod --shardsvr --replSet mongors1 --dbpath /data/db --port 27017
 
   mongors1n3:
+    <<: *mongo-defaults
     container_name: mongors1n3
-    image: mongo
-    restart: always
-    command: mongod --shardsvr --replSet mongors1 --dbpath /data/db --port 27017
-    expose:
-      - "27017"
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - mongo_data3:/data/db
-    healthcheck:
-      test: ["CMD","mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
+    command: mongod --shardsvr --replSet mongors1 --dbpath /data/db --port 27017
 
-  # второй шард и реплики
+  # Shard 2
   mongors2n1:
+    <<: *mongo-defaults
     container_name: mongors2n1
-    image: mongo
-    restart: always
-    expose:
-      - "27017"
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ./mongodb/init-shard2.js:/docker-entrypoint-initdb.d/init-shard2.js
       - mongo_data4:/data/db
     command: mongod --shardsvr --replSet mongors2 --dbpath /data/db --port 27017
-    healthcheck:
-      test: ["CMD","mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
 
   mongors2n2:
+    <<: *mongo-defaults
     container_name: mongors2n2
-    image: mongo
-    restart: always
-    command: mongod --shardsvr --replSet mongors2 --dbpath /data/db --port 27017
-    expose:
-      - "27017"
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - mongo_data5:/data/db
-    healthcheck:
-      test: ["CMD","mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
+    command: mongod --shardsvr --replSet mongors2 --dbpath /data/db --port 27017
 
   mongors2n3:
+    <<: *mongo-defaults
     container_name: mongors2n3
-    image: mongo
-    restart: always
-    command: mongod --shardsvr --replSet mongors2 --dbpath /data/db --port 27017
-    expose:
-      - "27017"
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - mongo_data6:/data/db
-    healthcheck:
-      test: ["CMD","mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
+    command: mongod --shardsvr --replSet mongors2 --dbpath /data/db --port 27017
 
-  # серверы конфигурации
+  # Config Servers
   mongocfg1:
+    <<: *mongo-defaults
     container_name: mongocfg1
-    image: mongo
-    restart: always
-    expose:
-      - "27017"
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ./mongodb/init-config.js:/docker-entrypoint-initdb.d/init-config.js
       - mongocfg1:/data/db
     command: mongod --configsvr --replSet mongors1conf --dbpath /data/db --port 27017
-    healthcheck:
-      test: [ "CMD","mongosh", "--eval", "db.adminCommand('ping')" ]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
 
   mongocfg2:
+    <<: *mongo-defaults
     container_name: mongocfg2
-    image: mongo
-    restart: always
-    command: mongod --configsvr --replSet mongors1conf --dbpath /data/db --port 27017
-    expose:
-      - "27017"
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - mongocfg2:/data/db
-    healthcheck:
-      test: ["CMD","mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
+    command: mongod --configsvr --replSet mongors1conf --dbpath /data/db --port 27017
 
   mongocfg3:
+    <<: *mongo-defaults
     container_name: mongocfg3
-    image: mongo
-    restart: always
-    command: mongod --configsvr --replSet mongors1conf --dbpath /data/db --port 27017
-    expose:
-      - "27017"
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - mongocfg3:/data/db
-    healthcheck:
-      test: ["CMD","mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
+    command: mongod --configsvr --replSet mongors1conf --dbpath /data/db --port 27017
 
-  # mongos
+  # Mongos Routers
   mongos1:
+    <<: *mongos-defaults
     container_name: mongos1
-    image: mongo
-    restart: always
-    command: mongos --configdb mongors1conf/mongocfg1:27017,mongocfg2:27017,mongocfg3:27017 --port 27017 --bind_ip_all
     ports:
-      - 27019:27017
-    expose:
-      - "27017"
+      - "27019:27017"
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ./mongodb/init-mongos.js:/docker-entrypoint-initdb.d/init-mongos.js
-    depends_on:
-      - mongocfg1
-      - mongocfg2
-
 
   mongos2:
+    <<: *mongos-defaults
     container_name: mongos2
-    image: mongo
-    restart: always
-    command: mongos --configdb mongors1conf/mongocfg1:27017,mongocfg2:27017,mongocfg3:27017 --port 27017 --bind_ip_all
     ports:
       - 27020:27017
-    expose:
-      - "27017"
+
+  moderator-db:
+    image: postgres:16
+    container_name: moderator_db
+    restart: always
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-    depends_on:
-      - mongocfg1
-      - mongocfg2
+      - moderator_data:/var/lib/postgresql/data/
+    env_file:
+      - ./.env
+    environment:
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    ports:
+      - "5435:5432"
+    expose:
+      - "5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d ${DB_NAME}" ]
+      interval: 5s
+      retries: 5
+      timeout: 5s
 
 volumes:
+  moderator_static_volume:
+  moderator_media_volume:
+  moderator_data:
   mongo_data1:
   mongo_data2:
   mongo_data3:

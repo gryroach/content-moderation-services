@@ -1,10 +1,8 @@
 # stdlib
 from uuid import UUID
 
-# thirdparty
-from documents.movie import Movie
-
 # project
+from documents.movie import Movie
 from schemas.movie import AdditionalInfo, CreateMovie, MovieDetail, UpdateMovie
 from services.reactions import get_movie_statistics
 from services.repositories.base import RatingRepository

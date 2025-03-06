@@ -5,13 +5,13 @@ from uuid import UUID
 
 # thirdparty
 from beanie.odm.enums import SortDirection
-from documents.bookmark import Bookmark as BookmarkDocument
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from starlette import status
 
 # project
 from api.v1.pagination import PaginationParams
+from documents.bookmark import Bookmark as BookmarkDocument
 from schemas.auth import JwtToken
 from schemas.bookmark import BookmarkCreateRequest, CreateBookmark
 from services.jwt_token import JWTBearer

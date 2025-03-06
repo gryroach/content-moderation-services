@@ -71,6 +71,7 @@ known_first_party = [
     "api",
     "core",
     "db",
+    "documents",
     "enums",
     "exceptions",
     "handlers",
