@@ -3,26 +3,22 @@ FROM python:3.12-slim-bookworm
 # Install uv.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
+# Install the application dependencies.
 WORKDIR /app
-
-RUN apt-get update && apt-get install -y gettext && apt-get install --no-install-recommends -y build-essential
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-
-RUN  mkdir -p /var/www/static/ \
-  && mkdir -p /var/www/media/ \
-  && mkdir -p /app/static/ \
-  && mkdir -p /app/media/
+ENV PYTHONPATH="./src"
 
 # Copy dependencies into the container.
 COPY ./manual_moderation_service/pyproject.toml .
 COPY uv.lock .
 RUN uv sync --frozen --no-cache --package manual_moderation_service
 
+# Copy the application into the container.
+COPY ./manual_moderation_service/alembic.ini .
 COPY ./manual_moderation_service/src .
-COPY ./manual_moderation_service/django-entrypoint.sh .
+COPY ./manual_moderation_service/keys ./keys
+COPY ./manual_moderation_service/entrypoint-api.sh .
 
-EXPOSE 8000
-
-ENTRYPOINT ["bash", "django-entrypoint.sh"]
+ENTRYPOINT ["bash", "entrypoint-api.sh"]

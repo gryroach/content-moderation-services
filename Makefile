@@ -8,6 +8,10 @@ run-all:
 run-api:
 	docker compose up -d --build nginx ugc-api
 
+# Запуск API панели модератора
+run-admin:
+	docker compose up -d --build nginx moderator-admin
+
 # Остановка и удаление всех контейнеров
 down:
 	docker compose down

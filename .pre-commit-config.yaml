@@ -11,7 +11,7 @@ repos:
       - id: check-merge-conflict
         exclude: research/
       - id: end-of-file-fixer
-        exclude: notification_service/src/db/migrations/|research/
+        exclude: manual_moderation_service/src/db/migrations/|research/
         exclude_types:
           [svg, css, html, less, javascript, json, coffee, map, markdown, pem]
 
@@ -41,7 +41,7 @@ repos:
         language: python
         types: [python]
         args: [check]
-        exclude: manual_moderation_service/src/moderator/migrations/|research/
+        exclude: manual_moderation_service/src/db/migrations/|research/
         require_serial: false
         additional_dependencies: []
 
@@ -51,6 +51,6 @@ repos:
         language: python
         types: [python]
         args: [--config-file, pyproject.toml]
-        exclude: manual_moderation_service/src/moderator/migrations/|research/
+        exclude: manual_moderation_service/src/db/migrations/|research/
         require_serial: false
         additional_dependencies: []

@@ -1,4 +1,4 @@
-name: Notifications Service
+name: Moderation Services Linters
 
 on:
   push:
@@ -35,11 +35,11 @@ jobs:
 
       - name: Run ruff format
         run: |
-          ruff format --check --exclude notification_service/src/db/migrations/,research/ .
+          ruff format --check --exclude manual_moderation_service/src/db/migrations/,research/ .
 
       - name: Run ruff lint
         run: |
-          ruff check --exclude notification_service/src/db/migrations/,research/ --output-format=github .
+          ruff check --exclude manual_moderation_service/src/db/migrations/,research/ --output-format=github .
 
       - name: Run mypy
         run: |
