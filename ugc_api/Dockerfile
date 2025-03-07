@@ -11,7 +11,7 @@ ENV PYTHONUNBUFFERED 1
 ENV PYTHONPATH="./src"
 
 # Copy dependencies into the container.
-COPY ./ugc_api/pyproject.toml .
+COPY ./pyproject.toml .
 COPY uv.lock .
 RUN uv sync --frozen --no-cache --package ugc_api
 

@@ -13,14 +13,10 @@ from starlette import status
 # project
 from api.v1.pagination import PaginationParams
 from schemas.auth import JwtToken
-from schemas.review import (
-    CreateReview,
-    CreateReviewData,
-    StatusUpdate,
-    UpdateReview,
-)
+from schemas.review import CreateReviewData, StatusUpdate
 from services.jwt_token import JWTBearer
 from services.repositories.reviews import ReviewRepository
+from services.review_service import ReviewService, get_review_service
 
 router = APIRouter()
 
@@ -50,8 +46,14 @@ async def get_reviews(
     token_payload: Annotated[JwtToken, Depends(JWTBearer(auto_error=False))],
     movie_id: Annotated[UUID | None, Query(description="Фильтр по фильму")] = None,
     user_id: Annotated[UUID | None, Query(description="Фильтр по пользователю")] = None,
-    rating__gte: Annotated[int | None, Query(description="Фильтр по рейтингу рецензии (больше или равно)")] = None,
-    rating__lte: Annotated[int | None, Query(description="Фильтр по рейтингу рецензии (меньше или равно)")] = None,
+    rating__gte: Annotated[
+        int | None,
+        Query(description="Фильтр по рейтингу рецензии (больше или равно)"),
+    ] = None,
+    rating__lte: Annotated[
+        int | None,
+        Query(description="Фильтр по рейтингу рецензии (меньше или равно)"),
+    ] = None,
 ) -> list[ReviewDocument]:
     request_user = None
     if token_payload is not None:
@@ -101,9 +103,9 @@ async def get_review(
 async def create_review(
     review_data: CreateReviewData,
     token_payload: Annotated[JwtToken, Depends(JWTBearer())],
-    review_repo: Annotated[ReviewRepository, Depends()],
+    review_service: Annotated[ReviewService, Depends(get_review_service)],
 ) -> ReviewDocument:
-    return await review_repo.create(CreateReview(**review_data.model_dump(), user_id=token_payload.user))
+    return await review_service.create_review(review_data=review_data, user_id=token_payload.user)
 
 
 @router.delete(
@@ -115,6 +117,7 @@ async def create_review(
 async def delete_review(
     review_id: UUID,
     token_payload: Annotated[JwtToken, Depends(JWTBearer())],
+    review_service: Annotated[ReviewService, Depends(get_review_service)],
     review_repo: Annotated[ReviewRepository, Depends()],
 ) -> None:
     review: ReviewDocument = await review_repo.get(document_id=review_id, request_user=token_payload.user)
@@ -123,7 +126,8 @@ async def delete_review(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can delete only your review",
         )
-    await review.delete()
+
+    await review_service.delete_review(review_id=review_id, user_id=token_payload.user)
 
 
 @router.patch(
@@ -137,19 +141,16 @@ async def change_review_satus(
     review_id: UUID,
     status_update: StatusUpdate,
     token_payload: Annotated[JwtToken, Depends(JWTBearer())],
-    review_repo: Annotated[ReviewRepository, Depends()],
+    review_service: Annotated[ReviewService, Depends(get_review_service)],
 ) -> ReviewDocument:
     if token_payload.role != "moderator":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can't change the review status",
         )
-    review: ReviewDocument = await review_repo.get(document_id=review_id, get_all=True)
-    review_update_data = UpdateReview(
-        movie_id=review.movie_id,
-        user_id=review.user_id,
-        title=review.title,
-        review_text=review.review_text,
-        status=status_update.status,
+
+    return await review_service.update_review_status(
+        review_id=review_id,
+        status_update=status_update,
+        moderator_id=token_payload.user,
     )
-    return await review_repo.update(document=review, update_data=review_update_data)

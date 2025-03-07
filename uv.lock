@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.12"
 
 [manifest]
@@ -7,6 +8,24 @@ members = [
     "content-moderation-service",
     "manual-moderation-service",
     "ugc-api",
+]
+
+[[package]]
+name = "aiokafka"
+version = "0.9.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "async-timeout" },
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/88/69/cafa02d766547dc04557eab3b119ae0b1056dd851806027147a89dab4a1c/aiokafka-0.9.0.tar.gz", hash = "sha256:11f6bd9b7772a8f5f04b2ce379759800e108475c3df4f11c491ada7587b85166", size = 557525 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/62/88/d361b78e3278259e148766e9d47293f943926b554d37dbd0d2004413ebfc/aiokafka-0.9.0-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:93918bc9a33019e13932df8cc461fee488b6efbb58093d4876890bf9bf8785f0", size = 363503 },
+    { url = "https://files.pythonhosted.org/packages/48/07/5d64a12cde64affabc0e84d66b3ebd260a109ce70091f27a56c7556a564b/aiokafka-0.9.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e69a12956e3ff1a1d21c8e576bee042176551683310ddca27f25fead028ca46f", size = 1186557 },
+    { url = "https://files.pythonhosted.org/packages/f5/21/718427bf603cd63325027721bf6e2d0624a7f1c5d6b34185889d0409d48e/aiokafka-0.9.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6d8b9bc181bd8d65f9529d7eaf60cf0ba6982bc33a2a0bccb2833d2b41b8dd65", size = 1207241 },
+    { url = "https://files.pythonhosted.org/packages/51/e9/efacf5caf6617eeef1861d0e807ba398bb8553380f569a20c44db8f00efd/aiokafka-0.9.0-cp312-cp312-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:a021c3ef27d8c045a15f8ec14bdeffa10a8959b491601304cc25c8081cf00af3", size = 1163522 },
+    { url = "https://files.pythonhosted.org/packages/cd/18/c4887c668ee79019d302295861595b34ee99a31c6083490d9022b0258831/aiokafka-0.9.0-cp312-cp312-win32.whl", hash = "sha256:0fff7cd498f31ff69e450b272d76b20776bef17bf17beae43a465c3f07983a5c", size = 336644 },
+    { url = "https://files.pythonhosted.org/packages/d1/f5/d7fe10de4438259c26e1734ac4cb25595c02c1fcc3e0d5c99d0dfc640278/aiokafka-0.9.0-cp312-cp312-win_amd64.whl", hash = "sha256:91e3ec7b22b09ed51c0bcad72b1b599dae2455f83912881fed24c3abe4198c3e", size = 354989 },
 ]
 
 [[package]]
@@ -42,6 +61,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/6a/da/e7908b54e0f8043725a990bf625f2041ecf6bfe8eb7b19407f1c00b630f7/asgi-lifespan-2.1.0.tar.gz", hash = "sha256:5e2effaf0bfe39829cf2d64e7ecc47c7d86d676a6599f7afba378c31f5e3a308", size = 15627 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2f/f5/c36551e93acba41a59939ae6a0fb77ddb3f2e8e8caa716410c65f7341f72/asgi_lifespan-2.1.0-py3-none-any.whl", hash = "sha256:ed840706680e28428c01e14afb3875d7d76d3206f3d5b2f2294e059b5c23804f", size = 10895 },
+]
+
+[[package]]
+name = "async-timeout"
+version = "5.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a5/ae/136395dfbfe00dfc94da3f3e136d0b13f394cba8f4841120e34226265780/async_timeout-5.0.1.tar.gz", hash = "sha256:d9321a7a3d5a6a5e187e824d2fa0793ce379a202935782d555d6e9d2735677d3", size = 9274 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fe/ba/e2081de779ca30d473f21f5b30e0e737c438205440784c7dfc81efc2b029/async_timeout-5.0.1-py3-none-any.whl", hash = "sha256:39e3809566ff85354557ec2398b55e096c8364bacac9405a7a1fa429e77fe76c", size = 6233 },
 ]
 
 [[package]]
@@ -122,7 +150,7 @@ name = "click"
 version = "8.1.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "platform_system == 'Windows'" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b9/2e/0090cbf739cee7d23781ad4b89a9894a41538e4fcf4c31dcdd705b78eb8b/click-8.1.8.tar.gz", hash = "sha256:ed53c9d8990d83c2a27deae68e4ee337473f6330c040a31d4225c9574d16096a", size = 226593 }
 wheels = [
@@ -143,6 +171,7 @@ name = "content-moderation-service"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "aiokafka" },
     { name = "isort" },
     { name = "mypy" },
     { name = "pre-commit" },
@@ -153,6 +182,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiokafka", specifier = "==0.9.0" },
     { name = "isort", specifier = ">=6.0.0" },
     { name = "mypy", specifier = ">=1.15.0" },
     { name = "pre-commit", specifier = ">=4.1.0" },
