@@ -4,9 +4,9 @@ from uuid import UUID
 
 # thirdparty
 from beanie import SortDirection
-from documents.review import Review, Status
 
 # project
+from documents.review import Review, Status
 from schemas.review import CreateReview, UpdateReview
 from services.repositories.base import (
     DocumentNotFoundException,

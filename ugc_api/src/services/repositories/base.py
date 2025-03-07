@@ -6,8 +6,10 @@ from uuid import UUID
 from beanie import Document
 from beanie.odm.enums import SortDirection
 from beanie.odm.operators.update.general import Set
-from documents.reaction import LikeValue
 from pydantic import BaseModel
+
+# project
+from documents.reaction import LikeValue
 
 DocumentType = TypeVar("DocumentType", bound=Document)
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)

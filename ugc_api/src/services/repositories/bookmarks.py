@@ -1,7 +1,5 @@
-# thirdparty
-from documents.bookmark import Bookmark
-
 # project
+from documents.bookmark import Bookmark
 from schemas.bookmark import CreateBookmark, UpdateBookmark
 from services.repositories.base import BaseRepository
 

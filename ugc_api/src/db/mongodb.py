@@ -3,15 +3,15 @@ import logging
 
 # thirdparty
 from beanie import Document, init_beanie
-from documents.bookmark import Bookmark
-from documents.movie import Movie
-from documents.reaction import Reaction
-from documents.review import Review
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import OperationFailure
 
 # project
 from core.config import settings
+from documents.bookmark import Bookmark
+from documents.movie import Movie
+from documents.reaction import Reaction
+from documents.review import Review
 
 logger = logging.getLogger(__name__)
 
