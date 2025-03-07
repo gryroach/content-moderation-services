@@ -8,6 +8,11 @@ COMPOSE_CMD := docker-compose $(COMPOSE_FILES)
 run-all:
 	$(COMPOSE_CMD) up -d --build --remove-orphans
 
+# Запуск API панели модератора
+run-admin:
+	docker compose up -d --build nginx moderator-admin
+
+
 # Запуск только основных сервисов
 run-core:
 	$(COMPOSE_CMD) up -d --build

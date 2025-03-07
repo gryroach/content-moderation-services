@@ -3,10 +3,10 @@ from typing import Annotated
 from uuid import UUID
 
 # thirdparty
-from documents.review import Review as ReviewDocument
 from fastapi import Depends
 
 # project
+from documents.review import Review as ReviewDocument
 from schemas.review import (
     CreateReview,
     CreateReviewData,

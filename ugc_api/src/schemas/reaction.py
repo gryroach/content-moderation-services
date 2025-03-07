@@ -3,8 +3,10 @@ from datetime import datetime
 from uuid import UUID
 
 # thirdparty
-from documents.reaction import ContentType, LikeValue
 from pydantic import BaseModel
+
+# project
+from documents.reaction import ContentType, LikeValue
 
 
 class Reaction(BaseModel):
