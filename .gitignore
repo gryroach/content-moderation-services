@@ -173,3 +173,11 @@ cython_debug/
 *.pem
 !example_public_key.pem
 !example_private_key.pem
+
+!.env.example
+!**/.env.example
+
+# Frontend
+**/node_modules/
+**/.next/
+**/next-env.d.ts

@@ -15,7 +15,7 @@ services:
       start_period: 5s
     command: mongod --shardsvr --replSet mongors1 --dbpath /data/db --port 27017
     networks:
-      - ugc_main_network
+      - graduate_work_network
     
   mongors1n1:
     <<: *mongo_base
@@ -90,7 +90,7 @@ services:
       retries: 3
       start_period: 5s
     networks:
-      - ugc_main_network
+      - graduate_work_network
     
   mongocfg1:
     <<: *mongo_cfg
@@ -134,7 +134,7 @@ services:
       - mongocfg2
       - mongocfg3
     networks:
-      - ugc_main_network
+      - graduate_work_network
     
   mongos1:
     <<: *mongos_base
@@ -163,8 +163,6 @@ volumes:
   mongocfg3:
 
 networks:
-  ugc_main_network:
-    name: ugc_main_network
-    driver: bridge
-    labels:
-      com.docker.compose.network: ugc_main_network 
+  graduate_work_network:
+    name: graduate_work_network
+    external: true

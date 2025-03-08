@@ -16,4 +16,4 @@ networks:
     driver: bridge
   ugc_kafka_network:
     name: ugc_kafka_network
-    external: true
+    driver: bridge

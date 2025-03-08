@@ -21,4 +21,4 @@ COPY ./manual_moderation_service/src .
 COPY ./manual_moderation_service/keys ./keys
 COPY ./manual_moderation_service/entrypoint-api.sh .
 
-ENTRYPOINT ["bash", "entrypoint-api.sh"]
+ENTRYPOINT ["bash", "/app/entrypoint-api.sh"]
