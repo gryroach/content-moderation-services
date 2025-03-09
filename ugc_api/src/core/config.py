@@ -19,6 +19,14 @@ class AppSettings(BaseSettings):
     project_name: str = Field(default="UGC API")
     api_production: bool = Field(default=True)
 
+    # Kafka
+    # https://kafka.apache.org/documentation.html#producerconfigs
+    kafka_bootstrap_server: str = Field(default="kafka-0:9092")
+    kafka_topic_name: str = Field(default="user_events")
+    kafka_batch_sleep: int = Field(default=1, description="Задержка при отправке сообщений пакетами")
+    kafka_batch_size: int = Field(default=100, description="Количество сообщений, отправляемых в пакете")
+    kafka_retry_backoff_ms: int = Field(default=100)
+
     # MongoDB
     mongo_db: str = Field(default="Movies")
     mongo_user: str = Field(default="")

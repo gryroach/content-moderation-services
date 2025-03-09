@@ -1,0 +1,148 @@
+version: '3.4'
+
+services:
+  kafka-0:
+    &kafka-defaults
+    build: kafka
+    container_name: ugc-kafka-0
+    ports:
+      - "${KAFKA_EXTERNAL_PORT_0}:${KAFKA_EXTERNAL_PORT_0}"
+    environment:
+      - KAFKA_ENABLE_KRAFT=${KAFKA_ENABLE_KRAFT}
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=${KAFKA_CFG_CONTROLLER_QUORUM_VOTERS}
+      - KAFKA_KRAFT_CLUSTER_ID=${KAFKA_KRAFT_CLUSTER_ID}
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:${KAFKA_INTERNAL_PORT},CONTROLLER://:${KAFKA_CONTROLLER_PORT},EXTERNAL://:${KAFKA_EXTERNAL_PORT_0}
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-0:${KAFKA_INTERNAL_PORT},EXTERNAL://127.0.0.1:${KAFKA_EXTERNAL_PORT_0}
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_GROUP_INITIAL_REBALANCE_DELAY_MS=${KAFKA_CFG_GROUP_INITIAL_REBALANCE_DELAY_MS}
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=${KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE}
+      - KAFKA_CFG_CONNECTIONS_MAX_IDLE_MS=${KAFKA_CFG_CONNECTIONS_MAX_IDLE_MS}
+      - KAFKA_CFG_CONTROLLED_SHUTDOWN_ENABLE=${KAFKA_CFG_CONTROLLED_SHUTDOWN_ENABLE}
+      - KAFKA_CFG_CONTROLLED_SHUTDOWN_MAX_RETRIES=${KAFKA_CFG_CONTROLLED_SHUTDOWN_MAX_RETRIES}
+      - KAFKA_CFG_CONTROLLED_SHUTDOWN_RETRY_BACKOFF_MS=${KAFKA_CFG_CONTROLLED_SHUTDOWN_RETRY_BACKOFF_MS}
+      - KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS}
+      - KAFKA_JVM_PERFORMANCE_OPTS=${KAFKA_JVM_PERFORMANCE_OPTS}
+    volumes:
+      - kafka_0_data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:${KAFKA_INTERNAL_PORT}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+        reservations:
+          memory: 512M
+    networks:
+      - ugc_kafka_network
+    labels:
+      com.docker.compose.project: "ugc"
+      com.docker.compose.service: "kafka"
+      com.docker.compose.environment: "production"
+
+  kafka-1:
+    <<: *kafka-defaults
+    container_name: ugc-kafka-1
+    ports:
+      - "${KAFKA_EXTERNAL_PORT_1}:${KAFKA_EXTERNAL_PORT_1}"
+    environment:
+      - KAFKA_ENABLE_KRAFT=${KAFKA_ENABLE_KRAFT}
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=${KAFKA_CFG_CONTROLLER_QUORUM_VOTERS}
+      - KAFKA_KRAFT_CLUSTER_ID=${KAFKA_KRAFT_CLUSTER_ID}
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:${KAFKA_INTERNAL_PORT},CONTROLLER://:${KAFKA_CONTROLLER_PORT},EXTERNAL://:${KAFKA_EXTERNAL_PORT_1}
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-1:${KAFKA_INTERNAL_PORT},EXTERNAL://127.0.0.1:${KAFKA_EXTERNAL_PORT_1}
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
+    volumes:
+      - kafka_1_data:/bitnami/kafka
+    networks:
+      - ugc_kafka_network
+
+  kafka-2:
+    <<: *kafka-defaults
+    container_name: ugc-kafka-2
+    ports:
+      - "${KAFKA_EXTERNAL_PORT_2}:${KAFKA_EXTERNAL_PORT_2}"
+    environment:
+      - KAFKA_ENABLE_KRAFT=${KAFKA_ENABLE_KRAFT}
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_NODE_ID=2
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=${KAFKA_CFG_CONTROLLER_QUORUM_VOTERS}
+      - KAFKA_KRAFT_CLUSTER_ID=${KAFKA_KRAFT_CLUSTER_ID}
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:${KAFKA_INTERNAL_PORT},CONTROLLER://:${KAFKA_CONTROLLER_PORT},EXTERNAL://:${KAFKA_EXTERNAL_PORT_2}
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-2:${KAFKA_INTERNAL_PORT},EXTERNAL://127.0.0.1:${KAFKA_EXTERNAL_PORT_2}
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
+    volumes:
+      - kafka_2_data:/bitnami/kafka
+    networks:
+      - ugc_kafka_network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.0
+    container_name: ugc-kafka-ui
+    ports:
+      - "${KAFKA_UI_PORT}:${KAFKA_UI_PORT}"
+    environment:
+      - KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS=kafka-0:${KAFKA_INTERNAL_PORT}
+      - KAFKA_CLUSTERS_0_NAME=${KAFKA_UI_CLUSTER_NAME}
+    depends_on:
+      kafka-0:
+        condition: service_healthy
+    networks:
+      - ugc_kafka_network
+    labels:
+      com.docker.compose.project: "ugc"
+      com.docker.compose.service: "kafka-ui"
+      com.docker.compose.environment: "production"
+
+  kafka-init:
+    build: kafka
+    container_name: ugc-kafka-init
+    restart: on-failure
+    environment:
+      - KAFKA_HEAP_OPTS=-Xmx256M -Xms128M
+    depends_on:
+      kafka-0:
+        condition: service_healthy
+      kafka-1:
+        condition: service_healthy
+      kafka-2:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Waiting for Kafka brokers to be ready...' &&
+      sleep 15 &&
+      kafka-topics.sh --create --topic ${KAFKA_TOPIC_NAME} --replication-factor ${KAFKA_REPLICATION_FACTOR} --partitions ${KAFKA_PARTITIONS} --if-not-exists --bootstrap-server kafka-0:${KAFKA_INTERNAL_PORT} &&
+      echo 'Topics created successfully';
+      "
+    networks:
+      - ugc_kafka_network
+    labels:
+      com.docker.compose.project: "ugc"
+      com.docker.compose.service: "kafka-init"
+      com.docker.compose.environment: "production"
+
+volumes:
+  kafka_0_data:
+    name: ugc_kafka_0_data
+  kafka_1_data:
+    name: ugc_kafka_1_data
+  kafka_2_data:
+    name: ugc_kafka_2_data
+
+networks:
+  ugc_kafka_network:
+    name: ugc_kafka_network 

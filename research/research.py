@@ -10,7 +10,7 @@ config = {
     "apis": [
         {
             "name": "OpenAI",
-            "base_cost_per_token": 0.002,
+            "base_cost_per_token": 0.0001,
             "discounts": [
                 (1_000_000, 1.0),
                 (5_000_000, 0.9),
@@ -19,7 +19,7 @@ config = {
         },
         {
             "name": "Custom API 1",
-            "base_cost_per_token": 0.0015,
+            "base_cost_per_token": 0.00015,
             "discounts": [
                 (1_000_000, 1.0),
                 (5_000_000, 0.92),
@@ -28,7 +28,7 @@ config = {
         },
         {
             "name": "Custom API 2",
-            "base_cost_per_token": 0.003,
+            "base_cost_per_token": 0.00005,
             "discounts": [
                 (1_000_000, 1.0),
                 (5_000_000, 0.95),
@@ -40,28 +40,28 @@ config = {
     "cloud": {
         "name": "AWS CPU instance",
         "cost_per_instance": 410,
-        "requests_per_instance": 5_000_000,
+        "requests_per_instance": 2_000_000,
     },
     "server": {
         "name": "Свой сервер (CPU)",
         "cost_per_server": 288,
         "support_cost_per_server": 150,
         "additional_costs_factor": 1.2,
-        "requests_per_server": 10_000_000,
+        "requests_per_server": 5_000_000,
     },
     "gpu": {
         "name": "AWS GPU instance",
-        "cost_per_instance": 3000,
-        "requests_per_instance": 1_000_000,
+        "cost_per_instance": 1200,
+        "requests_per_instance": 7_000_000,
     },
     "gpu_server": {
         "name": "Свой сервер (GPU)",
         "cost_per_server": 2000,
         "support_cost_per_server": 300,
         "additional_costs_factor": 1.3,
-        "requests_per_server": 1_500_000,
+        "requests_per_server": 10_000_000,
     },
-    "max_requests": 1_500_000,
+    "max_requests": 20_000_000,
 }
 
 
