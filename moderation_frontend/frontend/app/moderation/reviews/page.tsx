@@ -1,46 +1,47 @@
 "use client"
 
-import { useEffect, useState, useMemo, useCallback } from "react"
-import { useRouter } from "next/navigation"
-import { useModerationAuth } from "@/contexts/moderation-auth-context"
-import type { ReviewDB } from "@/types/moderation-api"
-import {
-  Shield,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  ArrowUpDown,
-  Search,
-  Calendar,
-  Filter,
-  Tag,
-  Scale,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import ReviewCard from "@/components/moderation/review-card"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuTrigger,
   DropdownMenuSeparator,
-  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import ReviewCard from "@/components/moderation/review-card"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useSafeApi } from "@/hooks/use-safe-api"
-import { safeAccess, safeToArray } from "@/lib/error-handling"
-import { ModerationStatus } from "@/types/moderation-api"
-import { parseAutoModerationResult } from "@/lib/moderation-api"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/components/ui/use-toast"
+import { useModerationAuth } from "@/contexts/moderation-auth-context"
+import { useSafeApi } from "@/hooks/use-safe-api"
+import { createSafeApiClient } from "@/lib/api-wrapper"
+import { safeAccess, safeToArray } from "@/lib/error-handling"
+import { parseAutoModerationResult } from "@/lib/moderation-api"
+import type { ReviewDB } from "@/types/moderation-api"
+import { ModerationStatus } from "@/types/moderation-api"
+import {
+  AlertTriangle,
+  ArrowUpDown,
+  Calendar,
+  CheckCircle,
+  Filter,
+  Scale,
+  Search,
+  Shield,
+  Tag,
+  XCircle,
+} from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 export default function ModerationReviewsPage() {
   const [page, setPage] = useState(1)
-  const { isAuthenticated } = useModerationAuth()
+  const { isAuthenticated, token } = useModerationAuth()
   const router = useRouter()
   const [retryCount, setRetryCount] = useState(0)
   const [lastError, setLastError] = useState<Error | null>(null)
@@ -50,7 +51,16 @@ export default function ModerationReviewsPage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [selectedLaws, setSelectedLaws] = useState<string[]>([])
   const [localReviews, setLocalReviews] = useState<ReviewDB[]>([])
+  const [isBackgroundUpdating, setIsBackgroundUpdating] = useState(false)
   const { toast } = useToast()
+
+  // Ref для хранения ID последнего обновления
+  const updateIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const lastScrollPositionRef = useRef<number>(0)
+
+  // Получаем базовый URL API из переменных окружения
+  const apiBaseUrl = process.env.NEXT_PUBLIC_MODERATION_API_BASE_URL || "/api-moderator/v1"
+  const apiClient = createSafeApiClient(apiBaseUrl)
 
   // Use our safe API hook to fetch reviews with retry tracking
   const {
@@ -68,6 +78,89 @@ export default function ModerationReviewsPage() {
   const allReviews = safeToArray<ReviewDB>(safeAccess(reviewsData, "data", []))
   const currentPage = safeAccess<number, number>(reviewsData?.pagination || {}, "page", page)
   const hasNextPage = safeAccess<boolean, boolean>(reviewsData?.pagination || {}, "has_next", false)
+
+  // Функция для фонового обновления данных
+  const backgroundFetch = useCallback(async () => {
+    if (!token || !isAuthenticated) return
+
+    setIsBackgroundUpdating(true)
+
+    try {
+      // Сохраняем текущую позицию прокрутки
+      lastScrollPositionRef.current = window.scrollY
+
+      // Выполняем запрос с использованием токена
+      const result = await apiClient.get<{ pagination: { page: number; has_next: boolean }; data: ReviewDB[] }>(
+        `/review/reviews?page=${page}&size=50`,
+        {
+          defaultValue: { pagination: { page, has_next: false }, data: [] },
+        },
+      )
+
+      if (result && result.data) {
+        // Обновляем данные, сохраняя состояние UI
+        setLocalReviews((prevReviews) => {
+          // Создаем карту существующих рецензий для быстрого поиска
+          const existingReviewsMap = new Map(prevReviews.map((review) => [review.id, review]))
+
+          // Обновляем только те рецензии, которые изменились
+          const updatedReviews = result.data.map((newReview) => {
+            const existingReview = existingReviewsMap.get(newReview.id)
+
+            // Если рецензия существует и статус изменился, обновляем её
+            if (existingReview && existingReview.moderation_status !== newReview.moderation_status) {
+              return newReview
+            }
+
+            // Если рецензия существует и не изменилась, сохраняем существующую
+            // (чтобы сохранить локальное состояние UI, например, развернутый текст)
+            return existingReview || newReview
+          })
+
+          return updatedReviews
+        })
+      }
+    } catch (err) {
+      console.error("Background fetch error:", err)
+      // Не показываем ошибки фонового обновления пользователю
+    } finally {
+      setIsBackgroundUpdating(false)
+
+      // Восстанавливаем позицию прокрутки
+      if (lastScrollPositionRef.current) {
+        window.scrollTo({
+          top: lastScrollPositionRef.current,
+          behavior: "auto",
+        })
+      }
+    }
+  }, [token, isAuthenticated, page, apiClient])
+
+  // Настраиваем интервал для фонового обновления
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      // Очищаем предыдущий интервал, если он существует
+      if (updateIntervalRef.current) {
+        clearInterval(updateIntervalRef.current)
+      }
+
+      // Устанавливаем новый интервал
+      updateIntervalRef.current = setInterval(() => {
+        // Проверяем, активна ли вкладка
+        if (!document.hidden) {
+          backgroundFetch()
+        }
+      }, 1000) // Обновление каждую секунду
+
+      // Очищаем интервал при размонтировании компонента
+      return () => {
+        if (updateIntervalRef.current) {
+          clearInterval(updateIntervalRef.current)
+          updateIntervalRef.current = null
+        }
+      }
+    }
+  }, [isAuthenticated, token, backgroundFetch])
 
   // Обновляем локальное состояние при получении новых данных
   useEffect(() => {
@@ -214,17 +307,34 @@ export default function ModerationReviewsPage() {
   }, [localReviews])
 
   // Обработчик изменения статуса рецензии
-  const handleModerationComplete = useCallback(() => {
-    // Показываем уведомление
-    toast({
-      title: "Status updated",
-      description: "The review status has been successfully updated",
-      duration: 3000,
-    })
+  const handleModerationComplete = useCallback(
+    (reviewId: string, newStatus: ModerationStatus, rejectionReason?: string) => {
+      // Обновляем локальное состояние рецензии
+      setLocalReviews((prevReviews) =>
+        prevReviews.map((review) =>
+          review.id === reviewId
+            ? {
+                ...review,
+                moderation_status: newStatus,
+                rejection_reason: newStatus === ModerationStatus.REJECTED ? rejectionReason || null : null,
+                moderation_at: new Date().toISOString(),
+              }
+            : review,
+        ),
+      )
 
-    // Обновляем данные с сервера
-    refetch()
-  }, [refetch, toast])
+      // Показываем уведомление
+      toast({
+        title: "Status updated",
+        description: `Review has been ${newStatus === ModerationStatus.APPROVED ? "approved" : newStatus === ModerationStatus.REJECTED ? "rejected" : "marked as pending"}`,
+        duration: 3000,
+      })
+
+      // Запускаем фоновое обновление для синхронизации с сервером
+      backgroundFetch()
+    },
+    [toast, backgroundFetch],
+  )
 
   const handleNextPage = () => {
     if (hasNextPage) {
@@ -473,7 +583,7 @@ export default function ModerationReviewsPage() {
   )
 
   function renderReviewList() {
-    if (isLoading) {
+    if (isLoading && !isBackgroundUpdating) {
       return Array.from({ length: 3 }).map((_, i) => (
         <div key={i} className="space-y-3">
           <Skeleton className="h-8 w-3/4" />
@@ -533,3 +643,4 @@ export default function ModerationReviewsPage() {
     )
   }
 }
+
