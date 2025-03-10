@@ -1,0 +1,19 @@
+version: '3.4'
+
+# Этот файл используется для объединения всех сервисов
+# Запуск: docker-compose -f docker-compose.yml -f docker-compose.mongodb.yml -f docker-compose.kafka.yml up -d 
+
+# Примечание по сетям:
+# - ugc_main_network: общая сеть для всех сервисов
+# - ugc_kafka_network: сеть для Kafka и сервисов, которые с ней взаимодействуют
+#
+# Сети определены в каждом файле docker-compose с одинаковыми именами,
+# что позволяет контейнерам из разных файлов взаимодействовать друг с другом.
+
+networks:
+  ugc_main_network:
+    name: ugc_main_network
+    driver: bridge
+  ugc_kafka_network:
+    name: ugc_kafka_network
+    driver: bridge

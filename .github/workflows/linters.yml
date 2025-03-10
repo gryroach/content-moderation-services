@@ -35,15 +35,15 @@ jobs:
 
       - name: Run ruff format
         run: |
-          ruff format --check --exclude manual_moderation_service/src/db/migrations/,research/,tools/ .
+          ruff format --check --exclude manual_moderation_service/src/db/migrations/,research/ .
 
       - name: Run ruff lint
         run: |
-          ruff check --exclude manual_moderation_service/src/db/migrations/,research/,tools/ --output-format=github .
+          ruff check --exclude manual_moderation_service/src/db/migrations/,research/ --output-format=github .
 
       - name: Run mypy
         run: |
-          mypy --config-file pyproject.toml --exclude research/,tools/ .
+          mypy --config-file pyproject.toml --exclude research/ .
 
   notify:
     needs: lint

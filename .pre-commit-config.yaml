@@ -41,7 +41,7 @@ repos:
         language: python
         types: [python]
         args: [check]
-        exclude: manual_moderation_service/src/db/migrations/|research/|tools/
+        exclude: manual_moderation_service/src/db/migrations/|research/
         require_serial: false
         additional_dependencies: []
 
@@ -51,6 +51,6 @@ repos:
         language: python
         types: [python]
         args: [--config-file, pyproject.toml]
-        exclude: manual_moderation_service/src/db/migrations/|research/|tools/
+        exclude: manual_moderation_service/src/db/migrations/|research/
         require_serial: false
         additional_dependencies: []

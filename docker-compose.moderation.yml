@@ -1,0 +1,106 @@
+version: '3.4'
+
+services:
+  # Сервис модерации - production версия
+  moderation-frontend:
+    profiles: ["prod"]  # Запускается только с профилем prod
+    build:
+      context: ./moderation_frontend
+      dockerfile: Dockerfile
+    container_name: moderation-frontend
+    restart: always
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - ./moderation_frontend/.env
+    networks:
+      - graduate_work_network
+    volumes:
+      - moderation-frontend-node-modules:/app/node_modules
+      - moderation-frontend-next:/app/.next
+    depends_on:
+      - moderation-api
+
+  # Сервис модерации - dev версия с горячей перезагрузкой
+  moderation-frontend-dev:
+    profiles: ["dev"]  # Запускается только с профилем dev
+    build:
+      context: ./moderation_frontend
+      dockerfile: Dockerfile.dev
+    container_name: moderation-frontend-dev
+    restart: always
+    command: npm run dev
+    ports:
+      - "3000:3000"
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=development
+    env_file:
+      - ./moderation_frontend/.env
+    networks:
+      - graduate_work_network
+    volumes:
+      - ./moderation_frontend/frontend:/app
+      - moderation-frontend-dev-node-modules:/app/node_modules
+      - moderation-frontend-dev-next:/app/.next
+    depends_on:
+      - moderation-api
+
+  # База данных PostgreSQL для сервиса модерации
+  moderator-db:
+    image: postgres:16
+    container_name: moderator_db
+    restart: always
+    volumes:
+      - moderator_data:/var/lib/postgresql/data/
+    env_file:
+      - ./.env
+    environment:
+      - POSTGRES_PASSWORD=${MODERATOR_DB_PASSWORD}
+      - POSTGRES_USER=${MODERATOR_DB_USER}
+      - POSTGRES_DB=${MODERATOR_DB_NAME}
+    ports:
+      - "5435:5432"
+    expose:
+      - "5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${MODERATOR_DB_USER} -d ${MODERATOR_DB_NAME}" ]
+      interval: 5s
+      retries: 5
+      timeout: 5s
+    networks:
+      - graduate_work_network
+
+  # Backend API для сервиса модерации
+  moderation-api:
+    build:
+      context: .
+      dockerfile: ./manual_moderation_service/Dockerfile
+    container_name: moderation-api
+    image: moderation-api-image
+    restart: always
+    env_file:
+      - ./.env
+    ports:
+      - "8011:8000"
+    volumes:
+      - ./manual_moderation_service/src:/app/src
+    depends_on:
+      - moderator-db
+    networks:
+      - graduate_work_network
+
+networks:
+  graduate_work_network:
+    name: graduate_work_network
+    external: true
+
+volumes:
+  moderation-frontend-node-modules:
+  moderation-frontend-next:
+  moderation-frontend-dev-node-modules:
+  moderation-frontend-dev-next:
+  moderator_data:

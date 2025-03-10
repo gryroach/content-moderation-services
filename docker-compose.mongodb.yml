@@ -1,0 +1,168 @@
+version: '3.4'
+
+services:
+  # Общие настройки для MongoDB шардов
+  mongo_base: &mongo_base
+    image: mongo
+    restart: always
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    healthcheck:
+      test: ["CMD","mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    command: mongod --shardsvr --replSet mongors1 --dbpath /data/db --port 27017
+    networks:
+      - graduate_work_network
+    
+  mongors1n1:
+    <<: *mongo_base
+    container_name: mongors1n1
+    expose:
+      - "27017"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./mongodb/init-shard1.js:/docker-entrypoint-initdb.d/init-shard1.js
+      - mongo_data1:/data/db
+
+  mongors1n2:
+    <<: *mongo_base
+    container_name: mongors1n2
+    expose:
+      - "27017"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - mongo_data2:/data/db
+
+  mongors1n3:
+    <<: *mongo_base
+    container_name: mongors1n3
+    expose:
+      - "27017"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - mongo_data3:/data/db
+
+  # Второй шард и реплики
+  mongo_shard2: &mongo_shard2
+    <<: *mongo_base
+    command: mongod --shardsvr --replSet mongors2 --dbpath /data/db --port 27017
+    
+  mongors2n1:
+    <<: *mongo_shard2
+    container_name: mongors2n1
+    expose:
+      - "27017"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./mongodb/init-shard2.js:/docker-entrypoint-initdb.d/init-shard2.js
+      - mongo_data4:/data/db
+
+  mongors2n2:
+    <<: *mongo_shard2
+    container_name: mongors2n2
+    expose:
+      - "27017"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - mongo_data5:/data/db
+
+  mongors2n3:
+    <<: *mongo_shard2
+    container_name: mongors2n3
+    expose:
+      - "27017"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - mongo_data6:/data/db
+
+  # Серверы конфигурации
+  mongo_cfg: &mongo_cfg
+    image: mongo
+    restart: always
+    command: mongod --configsvr --replSet mongors1conf --dbpath /data/db --port 27017
+    healthcheck:
+      test: [ "CMD","mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - graduate_work_network
+    
+  mongocfg1:
+    <<: *mongo_cfg
+    container_name: mongocfg1
+    expose:
+      - "27017"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./mongodb/init-config.js:/docker-entrypoint-initdb.d/init-config.js
+      - mongocfg1:/data/db
+
+  mongocfg2:
+    <<: *mongo_cfg
+    container_name: mongocfg2
+    expose:
+      - "27017"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - mongocfg2:/data/db
+
+  mongocfg3:
+    <<: *mongo_cfg
+    container_name: mongocfg3
+    expose:
+      - "27017"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - mongocfg3:/data/db
+
+  # Mongos
+  mongos_base: &mongos_base
+    image: mongo
+    restart: always
+    command: mongos --configdb mongors1conf/mongocfg1:27017,mongocfg2:27017,mongocfg3:27017 --port 27017 --bind_ip_all
+    expose:
+      - "27017"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - mongocfg1
+      - mongocfg2
+      - mongocfg3
+    networks:
+      - graduate_work_network
+    
+  mongos1:
+    <<: *mongos_base
+    container_name: mongos1
+    ports:
+      - 27017:27017
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./mongodb/init-mongos.js:/docker-entrypoint-initdb.d/init-mongos.js
+
+  mongos2:
+    <<: *mongos_base
+    container_name: mongos2
+    ports:
+      - 27018:27017
+
+volumes:
+  mongo_data1:
+  mongo_data2:
+  mongo_data3:
+  mongo_data4:
+  mongo_data5:
+  mongo_data6:
+  mongocfg1:
+  mongocfg2:
+  mongocfg3:
+
+networks:
+  graduate_work_network:
+    name: graduate_work_network
+    external: true

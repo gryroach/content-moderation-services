@@ -1,5 +1,6 @@
 # thirdparty
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 
 # project
@@ -15,6 +16,15 @@ app = FastAPI(
     openapi_url="/api-moderator/openapi.json",
     default_response_class=ORJSONResponse,
     exception_handlers=exception_handlers,
+)
+
+# Настройка CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Можно указать конкретные домены, например ["http://localhost:3000"]
+    allow_credentials=True,
+    allow_methods=["*"],  # Разрешаем все методы, включая OPTIONS
+    allow_headers=["*"],
 )
 
 app.include_router(api_v1_router, prefix="/api-moderator/v1")

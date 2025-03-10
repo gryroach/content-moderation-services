@@ -13,6 +13,7 @@ from models.review import ModerationStatus
 class ModerationStatusRequest(StrEnum):
     APPROVED = "approved"
     REJECTED = "rejected"
+    PENDING = "pending"
 
 
 class CreateReview(BaseModel):
