@@ -21,6 +21,24 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
+  reactStrictMode: true,
+  async rewrites() {
+    return [
+      // Proxy API requests to avoid CORS issues in development
+      {
+        source: '/api-ugc/v1/:path*',
+        destination: process.env.NEXT_PUBLIC_API_BASE_URL ? 
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/:path*` : 
+          'http://localhost:8000/api-ugc/v1/:path*', // Default fallback
+      },
+      {
+        source: '/api-moderator/v1/:path*',
+        destination: process.env.NEXT_PUBLIC_MODERATION_API_BASE_URL ? 
+          `${process.env.NEXT_PUBLIC_MODERATION_API_BASE_URL}/:path*` : 
+          'http://localhost:8001/api-moderator/v1/:path*', // Default fallback
+      },
+    ]
+  },
 }
 
 mergeConfig(nextConfig, userConfig)
@@ -46,3 +64,4 @@ function mergeConfig(nextConfig, userConfig) {
 }
 
 export default nextConfig
+

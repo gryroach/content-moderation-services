@@ -172,3 +172,4 @@ export function useSafeMutation<T, D = any>(method: "post" | "put" | "patch" | "
     data,
   }
 }
+

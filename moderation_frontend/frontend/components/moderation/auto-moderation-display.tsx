@@ -110,3 +110,4 @@ export default function AutoModerationDisplay({ result }: AutoModerationDisplayP
     </Card>
   )
 }
+

@@ -39,6 +39,7 @@ export interface CreateReviewData {
   movie_id: string
   title: string
   review_text: string
+  rating: number
 }
 
 export interface StatusUpdate {
@@ -59,3 +60,20 @@ export interface AIIssue {
   description: string
   law: string
 }
+
+// Обновленные типы в соответствии с API
+export type ReviewOrderBy = "title" | "created_at" | "rating"
+
+export type SortDirection = 1 | -1
+
+export interface ReviewsQueryParams {
+  movie_id?: string
+  user_id?: string
+  rating__gte?: number
+  rating__lte?: number
+  page_size?: number
+  page_number?: number
+  order_by?: ReviewOrderBy
+  direction?: SortDirection
+}
+

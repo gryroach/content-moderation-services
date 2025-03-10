@@ -151,3 +151,4 @@ function exampleApiResponseHandling() {
   console.log("Null:", processUserData(nullResponse))
   // { userId: 0, userName: 'Guest', userEmail: 'no-email@example.com', theme: 'light', notifications: false, postCount: 0 }
 }
+

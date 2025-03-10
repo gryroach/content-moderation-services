@@ -4,3 +4,4 @@ export default function ModerationIndexPage() {
   // Redirect to the reviews page
   redirect("/moderation/reviews")
 }
+

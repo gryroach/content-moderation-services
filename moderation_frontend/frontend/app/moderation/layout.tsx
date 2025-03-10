@@ -15,3 +15,4 @@ export default function ModerationLayout({ children }: { children: ReactNode }) 
     </ModerationAuthProvider>
   )
 }
+

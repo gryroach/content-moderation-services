@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
 import { Star } from "lucide-react"
+import { useState } from "react"
 
 interface StarRatingProps {
   rating: number
@@ -13,6 +13,7 @@ interface StarRatingProps {
 
 export function StarRating({ rating, onRatingChange, max = 5, readOnly = false, size = "md" }: StarRatingProps) {
   const [hoverRating, setHoverRating] = useState(0)
+  const ratingId = `star-rating-${Math.random().toString(36).substring(2, 9)}`
 
   const handleClick = (index: number) => {
     if (!readOnly && onRatingChange) {
@@ -49,21 +50,32 @@ export function StarRating({ rating, onRatingChange, max = 5, readOnly = false, 
   }
 
   return (
-    <div className="flex">
+    <div className="flex" role="radiogroup" aria-labelledby={ratingId} aria-describedby={`${ratingId}-description`}>
+      <span id={ratingId} className="sr-only">
+        Rating
+      </span>
+      <span id={`${ratingId}-description`} className="sr-only">
+        Select a rating from 1 to {max} stars
+      </span>
+
       {[...Array(max)].map((_, index) => {
         const starValue = index + 1
         const isFilled = hoverRating ? starValue <= hoverRating : starValue <= rating
+        const starId = `${ratingId}-star-${starValue}`
 
         return (
           <button
             key={index}
+            id={starId}
             type="button"
             onClick={() => handleClick(starValue)}
             onMouseEnter={() => handleMouseEnter(starValue)}
             onMouseLeave={handleMouseLeave}
             className={`${getSizeClass()} ${readOnly ? "cursor-default" : "cursor-pointer"} transition-colors`}
             disabled={readOnly}
-            aria-label={`Rate ${starValue} out of ${max}`}
+            aria-checked={starValue <= rating}
+            aria-label={`${starValue} star${starValue !== 1 ? "s" : ""}`}
+            role="radio"
           >
             <Star
               className={`${getSizeClass()} ${isFilled ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`}
@@ -74,3 +86,4 @@ export function StarRating({ rating, onRatingChange, max = 5, readOnly = false, 
     </div>
   )
 }
+
