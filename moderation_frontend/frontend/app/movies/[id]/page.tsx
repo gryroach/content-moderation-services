@@ -33,7 +33,7 @@ export default function MoviePage() {
   // Получаем ID фильма из параметров маршрута
   const movieId = typeof params?.id === "string" ? params.id : Array.isArray(params?.id) ? params.id[0] : null
 
-  // Function to fetch reviews
+  // Update the fetchReviews function to be more efficient and only update when there are changes
   const fetchReviews = useCallback(
     async (shouldSetLoading = false) => {
       if (!movieId || isRefreshingRef.current) return
@@ -58,8 +58,11 @@ export default function MoviePage() {
           // Compare with previous state to avoid unnecessary renders
           const reviewsJson = JSON.stringify(reviewsData)
           if (reviewsJson !== previousReviewsRef.current) {
+            console.log("New reviews detected, updating UI")
             setReviews(reviewsData)
             previousReviewsRef.current = reviewsJson
+          } else {
+            console.log("No new reviews, skipping update")
           }
         }
       } catch (error) {
@@ -101,7 +104,7 @@ export default function MoviePage() {
     }
   }, [movieId])
 
-  // Initial data fetch
+  // Update the useEffect to handle auto-refresh more efficiently
   useEffect(() => {
     const fetchData = async () => {
       await fetchMovie()
@@ -112,10 +115,22 @@ export default function MoviePage() {
 
     // Set up auto-refresh interval for reviews
     refreshIntervalRef.current = setInterval(() => {
-      if (document.visibilityState === "visible") {
+      // Only refresh if the tab is visible and we're not already refreshing
+      if (document.visibilityState === "visible" && !isRefreshingRef.current) {
+        console.log("Auto-refreshing reviews")
+        fetchReviews(false) // Don't show loading state during auto-refresh
+      }
+    }, 1000) // Refresh every 1 seconds
+
+    // Add visibility change listener to pause/resume auto-refresh
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && !isRefreshingRef.current) {
+        console.log("Tab became visible, refreshing reviews")
         fetchReviews(false)
       }
-    }, 5000) // Refresh every 5 seconds
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
 
     // Cleanup function
     return () => {
@@ -123,6 +138,7 @@ export default function MoviePage() {
       if (refreshIntervalRef.current) {
         clearInterval(refreshIntervalRef.current)
       }
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
   }, [fetchMovie, fetchReviews])
 

@@ -1,22 +1,22 @@
 "use client"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { isDefined, safeAccess, suppressErrors } from "@/lib/error-handling"
-import { formatDate, moderateReview, parseAutoModerationResult, truncateString } from "@/lib/moderation-api"
+import { Label } from "@/components/ui/label"
+import { CheckCircle, XCircle, User, Calendar, Film, AlertTriangle, Clock } from "lucide-react"
+import { moderateReview, parseAutoModerationResult, formatDate, truncateString } from "@/lib/moderation-api"
 import { ModerationStatus, ModerationStatusRequest, type ReviewDB } from "@/types/moderation-api"
-import { AlertTriangle, Calendar, CheckCircle, Clock, Film, User, XCircle } from "lucide-react"
-import { useEffect, useState } from "react"
 import AutoModerationDisplay from "./auto-moderation-display"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { safeAccess, isDefined } from "@/lib/error-handling"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface ReviewCardProps {
   review: ReviewDB
-  onModerationComplete: (reviewId: string, status: ModerationStatus, rejectionReason?: string) => void
+  onModerationComplete: () => void
 }
 
 export default function ReviewCard({ review, onModerationComplete }: ReviewCardProps) {
@@ -74,10 +74,7 @@ export default function ReviewCard({ review, onModerationComplete }: ReviewCardP
             ? rejectionReason
             : "Not applicable"
 
-      // Use suppressErrors to prevent UI errors
-      const result = await suppressErrors(async () => await moderateReview(reviewId, status, reason), {
-        success: false,
-      })
+      const result = await moderateReview(reviewId, status, reason)
 
       if (result && result.success) {
         // Обновляем локальное состояние карточки
@@ -92,11 +89,7 @@ export default function ReviewCard({ review, onModerationComplete }: ReviewCardP
         }))
 
         // Уведомляем родительский компонент об изменении
-        onModerationComplete(
-          reviewId,
-          status as ModerationStatus,
-          status === ModerationStatusRequest.REJECTED ? rejectionReason : undefined,
-        )
+        onModerationComplete()
       } else {
         setError("Failed to update review status. Please try again.")
       }

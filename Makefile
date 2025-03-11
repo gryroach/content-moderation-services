@@ -2,7 +2,7 @@ include .env
 
 # Переменные для docker-compose файлов
 COMPOSE_FILES := -f docker-compose.yml -f docker-compose.mongodb.yml -f docker-compose.kafka.yml
-COMPOSE_CMD := docker-compose $(COMPOSE_FILES)
+COMPOSE_CMD := docker compose $(COMPOSE_FILES)
 
 # Инициализация сети
 init-networks:
@@ -41,12 +41,12 @@ run-moderation-api:
 # Запуск frontend сервиса модерации (dev режим)
 run-moderation-frontend:
 	./start-moderation.sh --dev
-	@echo "Сервис модерации запущен в режиме разработки и доступен по адресу: http://localhost:8080"
+	@echo "Сервис модерации запущен в режиме разработки и доступен по адресу: http://localhost:3000"
 
 # Запуск frontend сервиса модерации в prod режиме
 run-moderation-frontend-prod:
 	./start-moderation.sh --prod
-	@echo "Сервис модерации запущен в production режиме и доступен по адресу: http://localhost:8080"
+	@echo "Сервис модерации запущен в production режиме и доступен по адресу: http://localhost:3000"
 
 # Запуск полного стека модерации с nginx из основного docker-compose
 run-moderation-fullstack:
@@ -75,7 +75,6 @@ down-moderation-frontend:
 # Остановка всех сервисов модерации
 down-moderation:
 	@echo "Остановка сервисов модерации..."
-	-docker network inspect graduate_work_network >/dev/null 2>&1 || (echo "Сеть graduate_work_network не существует, создаем..." && ./init-networks.sh)
 	docker compose -f docker-compose.moderation.yml down
 	@echo "Все сервисы модерации остановлены"
 
@@ -93,19 +92,16 @@ down-all: down-core down-moderation
 # Остановка только основных сервисов
 down-core:
 	@echo "Остановка основных сервисов..."
-	-docker network inspect graduate_work_network >/dev/null 2>&1 || (echo "Сеть graduate_work_network не существует, создаем..." && ./init-networks.sh)
 	docker-compose down
 
 # Остановка только MongoDB
 down-mongo:
 	@echo "Остановка MongoDB..."
-	-docker network inspect graduate_work_network >/dev/null 2>&1 || (echo "Сеть graduate_work_network не существует, создаем..." && ./init-networks.sh)
 	docker-compose -f docker-compose.mongodb.yml down
 
 # Остановка только Kafka
 down-kafka:
 	@echo "Остановка Kafka..."
-	-docker network inspect graduate_work_network >/dev/null 2>&1 || (echo "Сеть graduate_work_network не существует, создаем..." && ./init-networks.sh)
 	docker-compose -f docker-compose.kafka.yml down
 
 # Логи и статусы не требуют сетей напрямую, но могут показывать ошибки, если сети нет

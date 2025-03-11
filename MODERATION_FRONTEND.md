@@ -130,13 +130,13 @@ make run-moderation-frontend-prod
 
 Основные переменные:
 
-| Переменная                | Описание                                    | Значение по умолчанию  |
-| ----------------------------------- | --------------------------------------------------- | ----------------------------------------- |
-| NODE_ENV                            | Режим работы Node.js                     | production                                |
-| NEXT_PUBLIC_API_BASE_URL            | URL API для бэкенда                       | http://localhost:8000/api-ugc/v1          |
-| NEXT_PUBLIC_MODERATION_API_BASE_URL | URL API для модерации                   | http://localhost:8081/api-moderator/v1/v1 |
-| NEXT_PUBLIC_AUTH_URL                | URL для аутентификации             | http://localhost                          |
-| NEXT_PUBLIC_BASE_PATH               | Базовый путь для интеграции | /moderation                               |
+| Переменная                | Описание                                    | Значение по умолчанию |
+| ----------------------------------- | --------------------------------------------------- | ---------------------------------------- |
+| NODE_ENV                            | Режим работы Node.js                     | production                               |
+| NEXT_PUBLIC_API_BASE_URL            | URL API для бэкенда                       | http://localhost:8000/api-ugc/v1         |
+| NEXT_PUBLIC_MODERATION_API_BASE_URL | URL API для модерации                   | http://localhost:8081/api-moderator/v1   |
+| NEXT_PUBLIC_AUTH_URL                | URL для аутентификации             | http://localhost                         |
+| NEXT_PUBLIC_BASE_PATH               | Базовый путь для интеграции | /moderation                              |
 
 ### Настройка переменных окружения
 

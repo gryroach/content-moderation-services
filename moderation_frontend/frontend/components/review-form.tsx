@@ -71,7 +71,6 @@ export default function ReviewForm({ movieId, movieTitle, onReviewSubmitted }: R
 
       console.log("Submitting review:", reviewData)
 
-      // Submit the review - will silently fall back to mock data if needed
       const result = await submitReview(reviewData)
 
       console.log("Review submission result:", result)
@@ -95,9 +94,10 @@ export default function ReviewForm({ movieId, movieTitle, onReviewSubmitted }: R
           }, 500)
         }
       }
-    } catch (error) {
-      // This should never happen now, but just in case
-      console.warn("Error submitting review:", error)
+    } catch (err) {
+      // Only log to console, don't show in UI unless it's a validation error
+      console.error("Error submitting review:", err)
+      // We don't set the error state here to avoid showing API errors in the UI
     } finally {
       setIsSubmitting(false)
     }
