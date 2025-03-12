@@ -1,8 +1,8 @@
 # stdlib
 import asyncio
-import json
 
 # thirdparty
+import orjson
 from aiokafka import AIOKafkaConsumer
 
 # project
@@ -14,7 +14,11 @@ from review_service import ReviewService
 
 class KafkaReviewConsumer:
     def __init__(self) -> None:
+        self.consumer: AIOKafkaConsumer | None = None
+
+    async def setup_consumer(self) -> None:
         self.consumer = AIOKafkaConsumer(settings.kafka.topic, bootstrap_servers=settings.kafka.bootstrap_servers)
+        await self.consumer.start()
 
     @staticmethod
     async def handle_message(message: dict) -> None:
@@ -29,15 +33,27 @@ class KafkaReviewConsumer:
             await ReviewService.delete_from_manual_moderation(review_id)
 
     async def consume(self) -> None:
-        await self.consumer.start()
+        await self.setup_consumer()
+        assert self.consumer is not None
         try:
             async for msg in self.consumer:
-                message = json.loads(msg.value)
+                message = orjson.loads(msg.value)
                 await self.handle_message(message)
         finally:
             await self.consumer.stop()
 
+    async def shutdown(self) -> None:
+        if self.consumer is not None:
+            await self.consumer.stop()
+
+
+async def main() -> None:
+    consumer = KafkaReviewConsumer()
+    try:
+        await consumer.consume()
+    except KeyboardInterrupt:
+        await consumer.shutdown()
+
 
 if __name__ == "__main__":
-    consumer = KafkaReviewConsumer()  # type: ignore
-    asyncio.run(consumer.consume())
+    asyncio.run(main())

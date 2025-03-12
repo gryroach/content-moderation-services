@@ -36,19 +36,6 @@ services:
     networks:
       - graduate_work_network
 
-  moderation-auto:
-    build:
-      context: .
-      dockerfile: ./automated_moderation_service/Dockerfile
-    container_name: moderation-auto
-    restart: always
-    depends_on:
-      kafka-0:
-        condition: service_healthy
-    networks:
-      - ugc_main_network
-      - ugc_kafka_network
-
   ugc-api-test:
     build:
       context: .

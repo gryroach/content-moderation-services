@@ -3,6 +3,7 @@ import logging
 
 # thirdparty
 import nltk
+import orjson
 from nltk.stem.snowball import SnowballStemmer
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,13 +13,13 @@ class KafkaSettings(BaseSettings):
     topic: str = Field(default="ugc_reviews")
     bootstrap_servers: str = Field(default="kafka-0:9092")
 
-    model_config = SettingsConfigDict(env_prefix="KAFKA_")
+    model_config = SettingsConfigDict(env_prefix="MODERATION_KAFKA_")
 
 
 class ModerationSettings(BaseSettings):
-    max_title_length: int = 100
-    max_review_length: int = 1000
-    banned_words: tuple[str, ...] = Field(default_factory=lambda: ())
+    max_length: int = 1000
+    banned_words: list[str] = Field(json_schema_extra={"decoder": orjson.loads})  # type: ignore
+    check_links: bool = Field(default=False)
 
     model_config = SettingsConfigDict(env_prefix="MODERATION_")
 
@@ -27,10 +28,12 @@ class LoggingSettings(BaseSettings):
     level: str = Field(default="INFO")
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
+    model_config = SettingsConfigDict(env_prefix="MODERATION_LOGGING_")
+
 
 class Settings(BaseSettings):
     kafka: KafkaSettings = KafkaSettings()
-    moderation: ModerationSettings = ModerationSettings()
+    moderation: ModerationSettings = ModerationSettings()  # type: ignore
     logging: LoggingSettings = LoggingSettings()
 
     model_config = SettingsConfigDict(
@@ -41,8 +44,10 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-nltk.download("punkt")
-stemmer = SnowballStemmer("russian")
+nltk.download("punkt_tab")
+stemmer_ru = SnowballStemmer("russian")
+stemmer_en = SnowballStemmer("english")
+
 logging.basicConfig(
     level=getattr(logging, settings.logging.level.upper()),
     format=settings.logging.format,

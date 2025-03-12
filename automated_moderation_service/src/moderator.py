@@ -6,7 +6,7 @@ from nltk import word_tokenize
 
 # project
 from ai_service.moderation_service import AIModerationService
-from config import settings, stemmer
+from config import settings, stemmer_en, stemmer_ru
 from constants import ModerationStatus
 from review_service import ReviewService
 
@@ -18,7 +18,9 @@ class Moderator:
         self.review_title = review_title
         self.review_text = review_text
         self.review_id = review_id
-        self.banned_stems = {stemmer.stem(word) for word in settings.banned_words}
+        self.banned_stems = {stemmer_ru.stem(word) for word in settings.moderation.banned_words} | {
+            stemmer_en.stem(word) for word in settings.moderation.banned_words
+        }
 
     async def moderate_review(self) -> None:
         title_moderation_status, title_moderation_comment = await self.moderate_text(self.review_title)
@@ -36,8 +38,8 @@ class Moderator:
         ):
             await ReviewService.update_status(
                 review_id=self.review_id,
-                status=ModerationStatus.REJECTED,
-                comment=title_moderation_comment,
+                status=text_moderation_status,
+                comment=text_moderation_comment,
             )
             return None
 
@@ -54,19 +56,20 @@ class Moderator:
         return ai_result, ai_comment
 
     def fast_moderate(self, text: str) -> bool:
-        if len(text) > settings.max_title_length:
+        if len(text) > settings.moderation.max_length:
             return False
         if self.contains_banned_words(text):
             return False
-        if settings.check_links and self.contains_links(text):
+        if settings.moderation.check_links and self.contains_links(text):
             return False
         return True
 
     def contains_banned_words(self, text: str) -> bool:
         words = word_tokenize(text.lower())
-        word_stems = {stemmer.stem(word) for word in words}
+        word_stems = {stemmer_ru.stem(word) for word in words} | {stemmer_en.stem(word) for word in words}
         return any(stem in self.banned_stems for stem in word_stems)
 
     @staticmethod
     def contains_links(text: str) -> bool:
-        return bool(re.search(r"https?://\S+", text))
+        url_pattern = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
+        return bool(re.search(url_pattern, text))

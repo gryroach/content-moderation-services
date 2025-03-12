@@ -41,8 +41,8 @@ done
 # Функция для остановки текущих контейнеров модерации
 stop_moderation() {
   echo "Остановка предыдущих контейнеров модерации..."
-  docker-compose -f docker-compose.moderation.yml stop 2>/dev/null
-  docker-compose -f docker-compose.moderation.yml rm -f 2>/dev/null
+  docker compose -f docker-compose.moderation.yml stop 2>/dev/null
+  docker compose -f docker-compose.moderation.yml rm -f 2>/dev/null
 }
 
 # Создаем общую сеть, если не существует
@@ -57,12 +57,12 @@ echo "Запуск сервиса модерации в режиме: $MODE..."
 if [ "$MODE" == "prod" ]; then
   # Prod-режим
   export MODERATION_SERVICE=moderation-frontend
-  docker-compose -f docker-compose.moderation.yml --profile prod up -d --build --force-recreate
+  docker compose -f docker-compose.moderation.yml --profile prod up -d --build --force-recreate
   echo "Сервис модерации (PRODUCTION) запущен и доступен по адресу: http://localhost:3000"
 else
   # Dev-режим (по умолчанию)
   export MODERATION_SERVICE=moderation-frontend-dev
-  docker-compose -f docker-compose.moderation.yml --profile dev up -d --build --force-recreate
+  docker compose -f docker-compose.moderation.yml --profile dev up -d --build --force-recreate
   echo "Сервис модерации (DEV) запущен и доступен по адресу: http://localhost:3000"
   echo "Режим разработки включает горячую перезагрузку."
 fi 
