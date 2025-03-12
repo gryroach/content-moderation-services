@@ -1,31 +1,5 @@
 version: '3.4'
 
-x-mongo-defaults: &mongo-defaults
-  image: mongo
-  restart: always
-  expose:
-    - "27017"
-  volumes:
-    - /etc/localtime:/etc/localtime:ro
-  healthcheck:
-    test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-    interval: 5s
-    timeout: 5s
-    retries: 3
-    start_period: 5s
-
-x-mongos-defaults: &mongos-defaults
-  image: mongo
-  restart: always
-  command: mongos --configdb mongors1conf/mongocfg1:27017,mongocfg2:27017,mongocfg3:27017 --port 27017 --bind_ip_all
-  expose:
-    - "27017"
-  volumes:
-    - /etc/localtime:/etc/localtime:ro
-  depends_on:
-    - mongocfg1
-    - mongocfg2
-
 services:
   nginx:
     image: nginx:latest
@@ -64,6 +38,19 @@ services:
         limits:
           cpus: '0.5'
           memory: 512M
+    networks:
+      - ugc_main_network
+      - ugc_kafka_network
+
+  moderation-auto:
+    build:
+      context: .
+      dockerfile: ./automated_moderation_service/Dockerfile
+    container_name: moderation-auto
+    restart: always
+    depends_on:
+      kafka-0:
+        condition: service_healthy
     networks:
       - ugc_main_network
       - ugc_kafka_network

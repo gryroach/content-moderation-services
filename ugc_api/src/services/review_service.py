@@ -90,6 +90,7 @@ class ReviewService:
                 "review_id": str(review.id),
                 "movie_id": str(review.movie_id),
                 "user_id": str(review.user_id),
+                "status": str(review.status),
                 "deleted_by": str(user_id),
             },
             key=str(review.id),
