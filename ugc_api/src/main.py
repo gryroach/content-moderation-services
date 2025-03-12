@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 # thirdparty
 import sentry_sdk
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 
 # project
@@ -40,5 +41,13 @@ app = FastAPI(
 )
 
 app.middleware("http")(request_id_require)
+# Настройка CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Можно указать конкретные домены, например ["http://localhost:3000"]
+    allow_credentials=True,
+    allow_methods=["*"],  # Разрешаем все методы, включая OPTIONS
+    allow_headers=["*"],
+)
 
 app.include_router(api_v1_router, prefix="/api-ugc/v1")
