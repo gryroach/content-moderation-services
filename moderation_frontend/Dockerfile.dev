@@ -1,0 +1,18 @@
+FROM node:20-alpine
+
+# Установка дополнительных пакетов для решения возможных проблем
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+# Копируем файлы зависимостей
+COPY ./frontend/package.json ./frontend/package-lock.json* ./
+
+# Устанавливаем зависимости с расширенными параметрами
+RUN npm install --verbose --force
+
+# Открываем порт
+EXPOSE 3000
+
+# Запускаем режим разработки
+CMD ["npm", "run", "dev"] 
