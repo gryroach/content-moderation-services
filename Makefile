@@ -52,7 +52,7 @@ run-moderation-frontend-prod:
 run-moderation-fullstack:
 	@echo "Запуск полного стека модерации с nginx..."
 	# 1. Запускаем nginx из основного docker-compose
-	docker-compose -f docker-compose.yml up -d nginx
+	docker compose -f docker-compose.yml up -d nginx
 	# 2. Запускаем сервисы модерации из docker-compose.moderation.yml
 	./start-moderation.sh --dev
 	@echo "Полный стек модерации запущен."
@@ -61,11 +61,11 @@ run-moderation-fullstack:
 
 # Запуск только MongoDB
 run-mongo:
-	docker-compose -f docker-compose.mongodb.yml up -d --build
+	docker compose -f docker-compose.mongodb.yml up -d --build
 
 # Запуск только Kafka
 run-kafka:
-	docker-compose -f docker-compose.kafka.yml up -d --build
+	docker compose -f docker-compose.kafka.yml up -d --build
 
 # Эти команды не требуют init-networks, поэтому оставляем их без изменений
 down-moderation-frontend:
@@ -81,8 +81,8 @@ down-moderation:
 # Остановка полного стека модерации включая nginx
 down-moderation-fullstack: down-moderation
 	@echo "Остановка nginx из основного docker-compose..."
-	docker-compose -f docker-compose.yml stop nginx
-	docker-compose -f docker-compose.yml rm -f nginx
+	docker compose -f docker-compose.yml stop nginx
+	docker compose -f docker-compose.yml rm -f nginx
 	@echo "Полный стек модерации остановлен"
 
 # Остановка всех сервисов
@@ -92,17 +92,17 @@ down-all: down-core down-moderation
 # Остановка только основных сервисов
 down-core:
 	@echo "Остановка основных сервисов..."
-	docker-compose down
+	docker compose down
 
 # Остановка только MongoDB
 down-mongo:
 	@echo "Остановка MongoDB..."
-	docker-compose -f docker-compose.mongodb.yml down
+	docker compose -f docker-compose.mongodb.yml down
 
 # Остановка только Kafka
 down-kafka:
 	@echo "Остановка Kafka..."
-	docker-compose -f docker-compose.kafka.yml down
+	docker compose -f docker-compose.kafka.yml down
 
 # Логи и статусы не требуют сетей напрямую, но могут показывать ошибки, если сети нет
 logs-all:
@@ -112,10 +112,10 @@ logs-moderation:
 	docker compose -f docker-compose.moderation.yml logs -f
 
 logs-kafka:
-	docker-compose -f docker-compose.kafka.yml logs -f
+	docker compose -f docker-compose.kafka.yml logs -f
 
 logs-mongo:
-	docker-compose -f docker-compose.mongodb.yml logs -f
+	docker compose -f docker-compose.mongodb.yml logs -f
 
 # Просмотр статуса всех сервисов
 ps-all: ps-core ps-moderation
@@ -130,35 +130,35 @@ ps-moderation:
 
 # Просмотр статуса Kafka
 ps-kafka:
-	docker-compose -f docker-compose.kafka.yml ps
+	docker compose -f docker-compose.kafka.yml ps
 
 # Просмотр статуса MongoDB
 ps-mongo:
-	docker-compose -f docker-compose.mongodb.yml ps
+	docker compose -f docker-compose.mongodb.yml ps
 
 # Инициализация шардов MongoDB
 init-db:
 	@echo "Initializing MongoDB configuration..."
-	docker-compose -f docker-compose.mongodb.yml exec mongocfg1 mongosh --eval 'load("/docker-entrypoint-initdb.d/init-config.js")'
+	docker compose -f docker-compose.mongodb.yml exec mongocfg1 mongosh --eval 'load("/docker-entrypoint-initdb.d/init-config.js")'
 	@echo "Initializing MongoDB shard 1..."
-	docker-compose -f docker-compose.mongodb.yml exec mongors1n1 mongosh --eval 'load("/docker-entrypoint-initdb.d/init-shard1.js")'
+	docker compose -f docker-compose.mongodb.yml exec mongors1n1 mongosh --eval 'load("/docker-entrypoint-initdb.d/init-shard1.js")'
 	@echo "Initializing MongoDB shard 2..."
-	docker-compose -f docker-compose.mongodb.yml exec mongors2n1 mongosh --eval 'load("/docker-entrypoint-initdb.d/init-shard2.js")'
+	docker compose -f docker-compose.mongodb.yml exec mongors2n1 mongosh --eval 'load("/docker-entrypoint-initdb.d/init-shard2.js")'
 	@echo "Initializing MongoDB mongos..."
 	@echo "Waiting for shards to initialize..."
 	@sleep 15
-	docker-compose -f docker-compose.mongodb.yml exec mongos1 mongosh --eval 'load("/docker-entrypoint-initdb.d/init-mongos.js")'
+	docker compose -f docker-compose.mongodb.yml exec mongos1 mongosh --eval 'load("/docker-entrypoint-initdb.d/init-mongos.js")'
 	@echo "Initialization complete!"
 
 # Создание пользователя MongoDB
 create-dbuser:
 	@echo "Creating MongoDB user..."
-	docker-compose -f docker-compose.mongodb.yml exec mongos1 mongosh --eval 'db.getSiblingDB("admin").createUser({ user: "$(UGC_MONGO_USER)" , pwd: "$(UGC_MONGO_PASSWORD)", roles: ["userAdminAnyDatabase", "dbAdminAnyDatabase", "readWriteAnyDatabase"]})'
+	docker compose -f docker-compose.mongodb.yml exec mongos1 mongosh --eval 'db.getSiblingDB("admin").createUser({ user: "$(UGC_MONGO_USER)" , pwd: "$(UGC_MONGO_PASSWORD)", roles: ["userAdminAnyDatabase", "dbAdminAnyDatabase", "readWriteAnyDatabase"]})'
 
 # Тесты
 test:
-	docker-compose build ugc-api-test
-	docker-compose run -T --rm ugc-api-test
+	docker compose build ugc-api-test
+	docker compose run -T --rm ugc-api-test
 
 # Получение токена
 get-token:
