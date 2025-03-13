@@ -4,4 +4,9 @@ version = "0.1.0"
 description = "Automated moderation service"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "aiokafka>=0.9.0",
+    "nltk>=3.9.1",
+    "orjson>=3.10.15",
+    "pydantic-settings>=2.8.1",
+]

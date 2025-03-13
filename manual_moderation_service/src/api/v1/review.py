@@ -14,7 +14,7 @@ from schemas.pagination import PaginationResult, Paginator
 from schemas.review import (
     CreateReview,
     ModerationResponseStatus,
-    ModerationStatusRequest,
+    ModerationStatus,
     ReviewDB,
     UpdateReview,
 )
@@ -92,7 +92,7 @@ async def create_review(
 )
 async def moderate_review(
     review_id: UUID,
-    moderation_status: ModerationStatusRequest,
+    moderation_status: ModerationStatus,
     rejection_reason: str,
     db: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[JwtToken, Depends(JWTBearer())],

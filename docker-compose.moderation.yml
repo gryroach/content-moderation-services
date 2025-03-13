@@ -93,6 +93,18 @@ services:
     networks:
       - graduate_work_network
 
+  # Сервис автоматической модерации
+  moderation-auto:
+    build:
+      context: .
+      dockerfile: ./automated_moderation_service/Dockerfile
+    container_name: moderation-auto
+    restart: always
+    env_file:
+      - ./.env
+    networks:
+      - graduate_work_network
+
 networks:
   graduate_work_network:
     name: graduate_work_network

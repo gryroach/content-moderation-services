@@ -1,6 +1,5 @@
 # stdlib
 from datetime import datetime
-from enum import StrEnum
 from uuid import UUID
 
 # thirdparty
@@ -8,12 +7,6 @@ from pydantic import BaseModel
 
 # project
 from models.review import ModerationStatus
-
-
-class ModerationStatusRequest(StrEnum):
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    PENDING = "pending"
 
 
 class CreateReview(BaseModel):
@@ -27,7 +20,7 @@ class CreateReview(BaseModel):
 
 
 class UpdateReview(CreateReview):
-    moderation_status: ModerationStatus | ModerationStatusRequest
+    moderation_status: ModerationStatus
     moderator_id: UUID
     rejection_reason: str | None = None
 

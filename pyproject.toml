@@ -14,7 +14,11 @@ dependencies = [
 ]
 
 [tool.uv.workspace]
-members = ["manual_moderation_service", "automated_moderation_service", "ugc_api"]
+members = [
+    "manual_moderation_service",
+    "automated_moderation_service",
+    "ugc_api",
+]
 
 [tool.ruff]
 exclude = [".venv"]
@@ -81,7 +85,10 @@ skip = [".venv"]
 combine_as_imports = true
 sections = ["STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
 known_first_party = [
+    "ai_service",
     "api",
+    "config",
+    "constants",
     "core",
     "db",
     "documents",
@@ -91,7 +98,9 @@ known_first_party = [
     "main",
     "middlewares",
     "models",
+    "moderator",
     "repositories",
+    "review_service",
     "schemas",
     "services",
     "workers",
