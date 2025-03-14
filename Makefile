@@ -2,7 +2,7 @@ include .env
 
 # Переменные для docker-compose файлов
 COMPOSE_FILES := -f docker-compose.yml -f docker-compose.mongodb.yml -f docker-compose.kafka.yml
-COMPOSE_CMD := docker-compose $(COMPOSE_FILES)
+COMPOSE_CMD := docker compose $(COMPOSE_FILES)
 
 # Инициализация сети
 init-networks:
@@ -43,11 +43,6 @@ run-moderation-frontend:
 	./start-moderation.sh --dev
 	@echo "Сервис модерации запущен в режиме разработки и доступен по адресу: http://localhost:3000"
 
-# Запуск frontend сервиса модерации в prod режиме
-run-moderation-frontend-prod:
-	./start-moderation.sh --prod
-	@echo "Сервис модерации запущен в production режиме и доступен по адресу: http://localhost:3000"
-
 # Запуск полного стека модерации с nginx из основного docker-compose
 run-moderation-fullstack:
 	@echo "Запуск полного стека модерации с nginx..."
@@ -56,7 +51,7 @@ run-moderation-fullstack:
 	# 2. Запускаем сервисы модерации из docker-compose.moderation.yml
 	./start-moderation.sh --dev
 	@echo "Полный стек модерации запущен."
-	@echo "Frontend модерации доступен по адресу: http://localhost:8080"
+	@echo "Frontend модерации доступен по адресу: http://localhost:3000"
 	@echo "API модерации доступен по адресу: http://localhost:8011/api-moderator"
 
 # Запуск только MongoDB

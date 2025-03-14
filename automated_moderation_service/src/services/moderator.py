@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class Moderator:
     """Сервис для модерации отзывов."""
 
-    def __init__(self, review_title: str, review_text: str, review_id: str) -> None:
+    def __init__(self, review_title: str, review_text: str, review_id: str, user_id: str, movie_id: str) -> None:
         """Инициализирует модератор.
 
         Args:
@@ -25,9 +25,11 @@ class Moderator:
             review_text: Текст отзыва
             review_id: Идентификатор отзыва
         """
+        self.combined_text = f"{review_title}\n\n{review_text}"
         self.review_title = review_title
         self.review_text = review_text
-        self.combined_text = f"{review_title}\n\n{review_text}"
+        self.user_id = user_id
+        self.movie_id = movie_id
         self.review_id = review_id
         self.banned_stems: set[str] = {stemmer_ru.stem(word) for word in settings.moderation.banned_words} | {
             stemmer_en.stem(word) for word in settings.moderation.banned_words
@@ -46,23 +48,30 @@ class Moderator:
                 status=ModerationStatus.REJECTED,
                 comment=FAST_MODERATION_FAIL_MESSAGE,
             )
-            return
+            return None
 
         # Если быстрая модерация пройдена, проверяем текст через AI
         ai_status, ai_comment = await AIModerationService.moderate_text(self.combined_text)
-        if ai_status == ModerationStatus.PENDING:
-            # Если AI не уверен, отправляем на ручную модерацию
-            await ReviewService.send_to_manual_moderation(
-                review_id=self.review_id,
-                comment=ai_comment,
-            )
-        else:
-            # Обновляем статус на решение AI (approved или rejected)
+        if ai_status in (
+            ModerationStatus.APPROVED,
+            ModerationStatus.REJECTED,
+        ):
             await ReviewService.update_status(
                 review_id=self.review_id,
                 status=ai_status,
                 comment=ai_comment,
             )
+            return None
+
+        # Если AI не уверен, отправляем на ручную модерацию
+        await ReviewService.send_to_manual_moderation(
+            review_id=self.review_id,
+            review_title=self.review_title,
+            review_text=self.review_text,
+            user_id=self.user_id,
+            movie_id=self.movie_id,
+            comment=ai_comment,
+        )
 
     def fast_moderate(self, text: str) -> bool:
         """Выполняет быструю модерацию без вызова AI API.

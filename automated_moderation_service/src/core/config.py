@@ -24,7 +24,7 @@ class ModerationSettings(BaseSettings):
 
     max_length: int = 1000
     banned_words: list[str] = Field(
-        default=["мат", "оскорбление", "непристойность"],
+        default_factory=lambda: ["мат", "оскорбление", "непристойность"],
         json_schema_extra={"decoder": orjson.loads},  # type: ignore
     )
     check_links: bool = Field(default=False)
@@ -85,6 +85,8 @@ class Settings(BaseSettings):
     moderation: ModerationSettings = ModerationSettings()  # type: ignore
     logging: LoggingSettings = LoggingSettings()
     gigachat: GigaChatSettings | None = None
+    ugc_grpc_server_url: str = Field(default="ugc-grpc-server:50051")
+    moderator_grpc_server_url: str = Field(default="moderation-grpc-server:50051")
 
     model_config = SettingsConfigDict(
         env_file=".env",

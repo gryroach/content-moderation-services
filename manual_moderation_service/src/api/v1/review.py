@@ -118,6 +118,6 @@ async def moderate_review(
         obj_in=obj_in,
     )
     await ReviewGRPCClient(settings.ugc_grpc_server_url).update_review_status(
-        str(review_id), moderation_status, rejection_reason
+        str(db_review.review_id), moderation_status, rejection_reason
     )
     return ModerationResponseStatus(success=True)
