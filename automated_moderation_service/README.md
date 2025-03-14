@@ -31,7 +31,7 @@ automated_moderation_service/
 
 ## Требования
 
-- Python 3.10+
+- Python 3.12+
 - Kafka
 - GigaChat API ключ (опционально)
 
