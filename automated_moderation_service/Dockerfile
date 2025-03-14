@@ -8,9 +8,9 @@ WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-ENV PYTHONPATH="./src"
 
 # Copy dependencies into the container.
+COPY ./grpc_services ./grpc_services
 COPY ./pyproject.toml .
 COPY uv.lock .
 RUN uv sync --frozen --no-cache --package automated_moderation_service

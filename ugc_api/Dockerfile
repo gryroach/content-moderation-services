@@ -16,9 +16,10 @@ COPY uv.lock .
 RUN uv sync --frozen --no-cache --package ugc_api
 
 # Copy the application into the container.
-COPY ./ugc_api/src .
+COPY ./ugc_api/src ./src
 COPY ./ugc_api/keys ./keys
 COPY ./ugc_api/entrypoint.sh .
+COPY ./grpc_services ./src/grpc_services
 
 # Run the application.
 ENTRYPOINT ["bash", "entrypoint.sh"]

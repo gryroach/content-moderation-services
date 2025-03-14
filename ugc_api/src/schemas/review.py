@@ -17,13 +17,10 @@ class CreateReview(BaseModel):
 
 class UpdateReview(CreateReview):
     status: Status
+    moderation_comment: str = ""
 
 
 class CreateReviewData(BaseModel):
     movie_id: UUID
     title: str
     review_text: str
-
-
-class StatusUpdate(BaseModel):
-    status: Status

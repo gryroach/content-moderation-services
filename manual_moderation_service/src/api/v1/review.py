@@ -8,7 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 # project
+from core.config import settings
 from db.db import get_session
+from grpc_services.grpc_client.review_client import ReviewGRPCClient
 from schemas.auth import JwtToken
 from schemas.pagination import PaginationResult, Paginator
 from schemas.review import (
@@ -57,7 +59,7 @@ async def get_review_by_id(
 ) -> ReviewDB:
     """Получить рецензию по id."""
     review_repo = ReviewRepository(db)
-    db_review = await review_repo.get(review_id)
+    db_review = await review_repo.get_by_field("review_id", review_id)
     if db_review is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -114,5 +116,8 @@ async def moderate_review(
     await review_repo.update(
         db_obj=db_review,
         obj_in=obj_in,
+    )
+    await ReviewGRPCClient(settings.ugc_grpc_server_url).update_review_status(
+        str(review_id), moderation_status, rejection_reason
     )
     return ModerationResponseStatus(success=True)

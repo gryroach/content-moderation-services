@@ -73,6 +73,10 @@ follow_imports = "normal"
 module = "ugc_api.*"
 follow_imports = "normal"
 
+[[tool.mypy.overrides]]
+module = "grpc_services.*"
+follow_imports = "skip"
+
 [tool.isort]
 profile = "black"
 multi_line_output = 3

@@ -26,8 +26,18 @@ class KafkaReviewConsumer:
         review_id = message.get("review_id")
 
         if event_type in {EventType.REVIEW_CREATED, EventType.REVIEW_STATUS_UPDATED}:
-            title, review_text = message.get("title", ""), message.get("review_text", "")
-            moderator_service = Moderator(title, review_text, review_id)
+            review_title = message.get("title", "")
+            review_text = message.get("review_text", "")
+            user_id = message.get("user_id")
+            movie_id = message.get("movie_id")
+
+            moderator_service = Moderator(
+                review_title=review_title,
+                review_text=review_text,
+                review_id=review_id,
+                user_id=user_id,
+                movie_id=movie_id,
+            )
             await moderator_service.moderate_review()
         elif event_type == EventType.REVIEW_DELETED and message.get("status") == ModerationStatus.PENDING:
             await ReviewService.delete_from_manual_moderation(review_id)

@@ -6,13 +6,8 @@ from uuid import UUID
 from fastapi import Depends
 
 # project
-from documents.review import Review as ReviewDocument
-from schemas.review import (
-    CreateReview,
-    CreateReviewData,
-    StatusUpdate,
-    UpdateReview,
-)
+from documents.review import Review as ReviewDocument, Status
+from schemas.review import CreateReview, CreateReviewData, UpdateReview
 from services.kafka_producer import (
     KafkaProducerService,
     get_kafka_producer_service,
@@ -24,7 +19,7 @@ class ReviewService:
     def __init__(
         self,
         review_repo: ReviewRepository,
-        kafka_producer: KafkaProducerService,
+        kafka_producer: KafkaProducerService | None = None,
     ):
         self.review_repo = review_repo
         self.kafka_producer = kafka_producer
@@ -34,6 +29,7 @@ class ReviewService:
         review = await self.review_repo.create(CreateReview(**review_data.model_dump(), user_id=user_id))
 
         # Отправляем сообщение в Kafka
+        assert self.kafka_producer is not None
         await self.kafka_producer.send_message(
             message={
                 "event_type": "review_created",
@@ -51,31 +47,19 @@ class ReviewService:
         return review
 
     async def update_review_status(
-        self, review_id: UUID, status_update: StatusUpdate, moderator_id: UUID
+        self, review_id: UUID, status_update: Status, moderation_comment: str
     ) -> ReviewDocument:
-        """Обновление статуса рецензии с отправкой события в Kafka."""
+        """Обновление статуса рецензии."""
         review: ReviewDocument = await self.review_repo.get(document_id=review_id, get_all=True)
         review_update_data = UpdateReview(
             movie_id=review.movie_id,
             user_id=review.user_id,
             title=review.title,
             review_text=review.review_text,
-            status=status_update.status,
+            status=status_update,
+            moderation_comment=moderation_comment,
         )
         updated_review = await self.review_repo.update(document=review, update_data=review_update_data)
-
-        # Отправляем сообщение в Kafka
-        await self.kafka_producer.send_message(
-            message={
-                "event_type": "review_status_updated",
-                "review_id": str(updated_review.id),
-                "movie_id": str(updated_review.movie_id),
-                "user_id": str(updated_review.user_id),
-                "status": updated_review.status,
-                "updated_by": str(moderator_id),
-            },
-            key=str(updated_review.id),
-        )
 
         return updated_review
 
@@ -84,6 +68,7 @@ class ReviewService:
         review: ReviewDocument = await self.review_repo.get(document_id=review_id, request_user=user_id)
 
         # Отправляем сообщение в Kafka перед удалением
+        assert self.kafka_producer is not None
         await self.kafka_producer.send_message(
             message={
                 "event_type": "review_deleted",

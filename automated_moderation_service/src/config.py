@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     kafka: KafkaSettings = KafkaSettings()
     moderation: ModerationSettings = ModerationSettings()  # type: ignore
     logging: LoggingSettings = LoggingSettings()
+    ugc_grpc_server_url: str = Field(default="ugc-grpc-server:50051")
+    moderator_grpc_server_url: str = Field(default="moderation-grpc-server:50051")
 
     model_config = SettingsConfigDict(
         env_file=".env",

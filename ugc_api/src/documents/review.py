@@ -22,6 +22,7 @@ class Review(Document):
     review_text: str
     rating: int = 0
     status: Status = Status.PENDING
+    moderation_comment: str = Field(default="")
     created_at: datetime = Field(default_factory=datetime.now)
 
     class Settings:

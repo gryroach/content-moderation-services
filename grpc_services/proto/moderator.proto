@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package review;
+
+service ModeratorService {
+  rpc CreateReview (CreateReviewRequest) returns (CreateDeleteReviewResponse);
+  rpc DeleteReview (DeleteReviewRequest) returns (CreateDeleteReviewResponse);
+}
+
+message CreateReviewRequest {
+  string user_id = 1;
+  string movie_id = 2;
+  string review_id = 3;
+  string review_title = 4;
+  string review_text = 5;
+  string auto_moderation_result = 6;
+}
+
+message DeleteReviewRequest {
+  string review_id = 1;
+}
+
+message CreateDeleteReviewResponse {
+  bool success = 1;
+  string message = 2;
+}

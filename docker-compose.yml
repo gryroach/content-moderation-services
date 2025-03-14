@@ -36,6 +36,21 @@ services:
     networks:
       - graduate_work_network
 
+  ugc-grpc-server:
+    build:
+      context: .
+      dockerfile: ./ugc_api/Dockerfile
+    container_name: ugc-grpc-server
+    image: ugc-api-image
+    entrypoint: ["uv", "run", "./src/grpc_server.py"]
+    restart: always
+    env_file:
+      - ./.env
+    ports:
+      - "50061:50051"
+    networks:
+      - graduate_work_network
+
   ugc-api-test:
     build:
       context: .

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package review;
+
+service ReviewService {
+  rpc UpdateReviewStatus (UpdateReviewStatusRequest) returns (UpdateReviewStatusResponse);
+}
+
+message UpdateReviewStatusRequest {
+  string review_id = 1;
+  string status = 2;
+  string comment = 3;
+}
+
+message UpdateReviewStatusResponse {
+  bool success = 1;
+  string message = 2;
+}
