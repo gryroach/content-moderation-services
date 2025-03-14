@@ -17,7 +17,7 @@ class ModerationResponse(BaseModel):
     """Модель для представления результата модерации."""
 
     status: Literal["approved", "rejected", "pending"]
-    tags: str
+    tags: str | list[str]
     issues: list[dict[str, str | int | float]]
     confidence: float | int = Field(ge=0, le=1)
 
