@@ -1,3 +1,5 @@
+version: '3.4'
+
 services:
   # Сервис модерации - production версия
   moderation-frontend:
@@ -115,6 +117,8 @@ services:
       context: .
       dockerfile: ./automated_moderation_service/Dockerfile
     container_name: moderation-auto
+    volumes:
+      - ./automated_moderation_service/src:/app/src
     restart: always
     env_file:
       - ./.env

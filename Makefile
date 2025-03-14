@@ -2,7 +2,7 @@ include .env
 
 # Переменные для docker-compose файлов
 COMPOSE_FILES := -f docker-compose.yml -f docker-compose.mongodb.yml -f docker-compose.kafka.yml
-COMPOSE_CMD := docker compose $(COMPOSE_FILES)
+COMPOSE_CMD := docker-compose $(COMPOSE_FILES)
 
 # Инициализация сети
 init-networks:

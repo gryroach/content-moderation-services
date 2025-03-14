@@ -1,31 +1,49 @@
 # stdlib
 import asyncio
+import logging
 
 # thirdparty
 import orjson
 from aiokafka import AIOKafkaConsumer
 
 # project
-from config import settings
-from constants import EventType, ModerationStatus
-from moderator import Moderator
-from review_service import ReviewService
+from core.config import settings
+from core.constants import EventType, ModerationStatus
+from services.moderator import Moderator
+from services.review_service import ReviewService
+
+logger = logging.getLogger(__name__)
 
 
 class KafkaReviewConsumer:
+    """Консьюмер для получения отзывов из Kafka."""
+
     def __init__(self) -> None:
+        """Инициализирует консьюмер Kafka."""
         self.consumer: AIOKafkaConsumer | None = None
 
     async def setup_consumer(self) -> None:
-        self.consumer = AIOKafkaConsumer(settings.kafka.topic, bootstrap_servers=settings.kafka.bootstrap_servers)
+        """Настраивает подключение к Kafka."""
+        self.consumer = AIOKafkaConsumer(
+            settings.kafka.topic,
+            bootstrap_servers=settings.kafka.bootstrap_servers,
+        )
         await self.consumer.start()
 
     @staticmethod
     async def handle_message(message: dict) -> None:
+        """Обрабатывает сообщение из Kafka.
+
+        Args:
+            message: Сообщение из Kafka
+        """
         event_type = message.get("event_type")
         review_id = message.get("review_id")
 
-        if event_type in {EventType.REVIEW_CREATED, EventType.REVIEW_STATUS_UPDATED}:
+        if event_type in {
+            EventType.REVIEW_CREATED,
+            EventType.REVIEW_STATUS_UPDATED,
+        }:
             review_title = message.get("title", "")
             review_text = message.get("review_text", "")
             user_id = message.get("user_id")
@@ -43,6 +61,7 @@ class KafkaReviewConsumer:
             await ReviewService.delete_from_manual_moderation(review_id)
 
     async def consume(self) -> None:
+        """Запускает процесс потребления сообщений из Kafka."""
         await self.setup_consumer()
         assert self.consumer is not None
         try:
@@ -53,16 +72,25 @@ class KafkaReviewConsumer:
             await self.consumer.stop()
 
     async def shutdown(self) -> None:
+        """Закрывает подключение к Kafka."""
         if self.consumer is not None:
             await self.consumer.stop()
 
 
 async def main() -> None:
+    """Основная функция приложения."""
+    logger.info("Запуск сервиса автоматической модерации")
     consumer = KafkaReviewConsumer()
     try:
         await consumer.consume()
     except KeyboardInterrupt:
+        logger.info("Получена команда на завершение работы")
         await consumer.shutdown()
+    except Exception as error:
+        logger.error(f"Критическая ошибка: {error}")
+        await consumer.shutdown()
+    finally:
+        logger.info("Сервис автоматической модерации остановлен")
 
 
 if __name__ == "__main__":

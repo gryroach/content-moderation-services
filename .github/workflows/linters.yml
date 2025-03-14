@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install "isort>=6.0.0" "mypy>=1.15.0" "ruff>=0.9.5" "sqlalchemy[mypy]>=2.0.38" "types-croniter==5.0.1.20241205"
+          pip install "isort>=6.0.0" "mypy>=1.15.0" "ruff>=0.9.5" "sqlalchemy[mypy]>=2.0.38" "types-croniter==5.0.1.20241205" "types-requests==2.31.0"
 
       - name: Run isort
         run: |
@@ -35,15 +35,15 @@ jobs:
 
       - name: Run ruff format
         run: |
-          ruff format --check --exclude manual_moderation_service/src/db/migrations/,research/,moderation_frontend/ .
+          ruff format --check --exclude manual_moderation_service/src/db/migrations/,research/,moderation_frontend/,tools/ .
 
       - name: Run ruff lint
         run: |
-          ruff check --exclude manual_moderation_service/src/db/migrations/,research/,moderation_frontend/ --output-format=github .
+          ruff check --exclude manual_moderation_service/src/db/migrations/,research/,moderation_frontend/,tools/ --output-format=github .
 
       - name: Run mypy
         run: |
-          mypy --config-file pyproject.toml --exclude 'research/|moderation_frontend/' .
+          mypy --config-file pyproject.toml --exclude 'research/|moderation_frontend/|tools/' .
 
   notify:
     needs: lint
