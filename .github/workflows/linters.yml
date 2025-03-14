@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install "isort>=6.0.0" "mypy>=1.15.0" "ruff>=0.9.5" "sqlalchemy[mypy]>=2.0.38" "types-croniter==5.0.1.20241205"
+          pip install "isort>=6.0.0" "mypy>=1.15.0" "ruff>=0.9.5" "sqlalchemy[mypy]>=2.0.38" "types-croniter==5.0.1.20241205" "types-requests==2.31.0"
 
       - name: Run isort
         run: |
