@@ -5,7 +5,6 @@ import logging
 # project
 from core.config import settings
 from core.constants import ModerationStatus
-from exceptions import GigaChatServiceError
 from services.ai_service.config import get_api_config
 from services.ai_service.repository import GigaChatRepository
 from services.ai_service.service import ModerationService
@@ -37,15 +36,13 @@ class AIModerationService:
                 ensure_ascii=False,
             )
             status = result.status
-            logger.info(result.confidence)
-            logger.info(auto_moderation_result)
             # Проверяем уровень уверенности для определения необходимости ручной модерации
             if result.confidence < settings.moderation.confidence:
                 status = ModerationStatus.PENDING
 
             return status, auto_moderation_result
 
-        except GigaChatServiceError as error:
+        except Exception as error:
             logger.error(f"Ошибка при модерации текста: {error}")
             # В случае ошибки отправляем на ручную модерацию
             return ModerationStatus.PENDING, f"Ошибка AI-модерации: {error}"

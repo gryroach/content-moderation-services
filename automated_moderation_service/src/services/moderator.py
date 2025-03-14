@@ -50,8 +50,6 @@ class Moderator:
 
         # Если быстрая модерация пройдена, проверяем текст через AI
         ai_status, ai_comment = await AIModerationService.moderate_text(self.combined_text)
-        logger.info(ai_status)
-        logger.info(ai_comment)
         if ai_status == ModerationStatus.PENDING:
             # Если AI не уверен, отправляем на ручную модерацию
             await ReviewService.send_to_manual_moderation(
