@@ -11,7 +11,7 @@ ENV PYTHONUNBUFFERED 1
 ENV PYTHONPATH="./src"
 
 # Copy dependencies into the container.
-COPY ./pyproject.toml .
+COPY ./automated_moderation_service/pyproject.toml .
 COPY uv.lock .
 RUN uv sync --frozen --no-cache --package automated_moderation_service
 

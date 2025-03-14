@@ -5,13 +5,13 @@ repos:
     rev: v2.3.0
     hooks:
       - id: check-ast
-        exclude: research/
+        exclude: research/|tools/
       - id: check-case-conflict
-        exclude: research/
+        exclude: research/|tools/
       - id: check-merge-conflict
-        exclude: research/
+        exclude: research/|tools/
       - id: end-of-file-fixer
-        exclude: manual_moderation_service/src/db/migrations/|research/|moderation_frontend/
+        exclude: manual_moderation_service/src/db/migrations/|research/|tools/|moderation_frontend/
         exclude_types:
           [svg, css, html, less, javascript, json, coffee, map, markdown, pem]
 
@@ -31,7 +31,7 @@ repos:
         language: python
         types: [python]
         args: [format]
-        exclude: research/|moderation_frontend/
+        exclude: research/|moderation_frontend/|tools/
         require_serial: false
         additional_dependencies: []
 
@@ -41,7 +41,7 @@ repos:
         language: python
         types: [python]
         args: [check]
-        exclude: manual_moderation_service/src/db/migrations/|research/|moderation_frontend/
+        exclude: manual_moderation_service/src/db/migrations/|research/|moderation_frontend/|tools/
         require_serial: false
         additional_dependencies: []
 
@@ -51,6 +51,6 @@ repos:
         language: python
         types: [python]
         args: [--config-file, pyproject.toml]
-        exclude: manual_moderation_service/src/db/migrations/|research/|moderation_frontend/
+        exclude: manual_moderation_service/src/db/migrations/|research/|moderation_frontend/|tools/
         require_serial: false
         additional_dependencies: []
