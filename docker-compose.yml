@@ -55,21 +55,6 @@ services:
     networks:
       - graduate_work_network
 
-  ugc-api-test:
-    build:
-      context: .
-      dockerfile: ./ugc_api/Dockerfile.test
-    container_name: ugc-api-test
-    image: ugc-api-test-image
-    env_file:
-      - ./.env
-    environment:
-      - SENTRY_DSN=
-    volumes:
-      - ./ugc_api/src:/app/src 
-    networks:
-      - graduate_work_network
-
 networks:
   graduate_work_network:
     name: graduate_work_network

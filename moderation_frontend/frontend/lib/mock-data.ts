@@ -4,21 +4,21 @@ import { v4 as uuidv4 } from "uuid"
 // Mock movie data with poster images
 export const mockMovies: Movie[] = [
   {
-    _id: "1a2b3c4d-5e6f-4a8b-9c0d-1e2f3a4b5c6d",
+    _id: "11111111-1111-1111-1111-111111111111",
     title: "The Dark Knight",
     rating: 9,
     created_at: new Date(2022, 0, 15).toISOString(),
     poster_url: "https://m.media-amazon.com/images/M/MV5BMTMxNTMwODM0NF5BMl5BanBnXkFtZTcwODAyMTk2Mw@@._V1_.jpg",
   },
   {
-    _id: "2b3c4d5e-6f7g-8h9i-0j1k-2l3m4n5o6p7q",
+    _id: "22222222-2222-2222-2222-222222222222",
     title: "Inception",
     rating: 8,
     created_at: new Date(2022, 1, 20).toISOString(),
     poster_url: "https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_.jpg",
   },
   {
-    _id: "3c4d5e6f-7g8h-9i0j-1k2l-3m4n5o6p7q8r",
+    _id: "33333333-3333-3333-3333-333333333333",
     title: "Interstellar",
     rating: 8,
     created_at: new Date(2022, 2, 25).toISOString(),
@@ -26,7 +26,7 @@ export const mockMovies: Movie[] = [
       "https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_.jpg",
   },
   {
-    _id: "4d5e6f7g-8h9i-0j1k-2l3m-4n5o6p7q8r9s",
+    _id: "44444444-4444-4444-4444-444444444444",
     title: "The Shawshank Redemption",
     rating: 9,
     created_at: new Date(2022, 3, 10).toISOString(),
@@ -34,7 +34,7 @@ export const mockMovies: Movie[] = [
       "https://m.media-amazon.com/images/M/MV5BNDE3ODcxYzMtY2YzZC00NmNlLWJiNDMtZDViZWM2MzIxZDYwXkEyXkFqcGdeQXVyNjAwNDUxODI@._V1_.jpg",
   },
   {
-    _id: "5e6f7g8h-9i0j-1k2l-3m4n-5o6p7q8r9s0t",
+    _id: "55555555-5555-5555-5555-555555555555",
     title: "Pulp Fiction",
     rating: 8,
     created_at: new Date(2022, 4, 5).toISOString(),
@@ -42,7 +42,7 @@ export const mockMovies: Movie[] = [
       "https://m.media-amazon.com/images/M/MV5BNGNhMDIzZTUtNTBlZi00MTRlLWFjM2ItYzViMjE3YzI5MjljXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_.jpg",
   },
   {
-    _id: "6f7g8h9i-0j1k-2l3m-4n5o-6p7q8r9s0t1u",
+    _id: "66666666-6666-6666-6666-666666666666",
     title: "The Godfather",
     rating: 9,
     created_at: new Date(2022, 5, 15).toISOString(),
@@ -50,7 +50,7 @@ export const mockMovies: Movie[] = [
       "https://m.media-amazon.com/images/M/MV5BM2MyNjYxNmUtYTAwNi00MTYxLWJmNWYtYzZlODY3ZTk3OTFlXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_.jpg",
   },
   {
-    _id: "7g8h9i0j-1k2l-3m4n-5o6p-7q8r9s0t1u2v",
+    _id: "77777777-7777-7777-7777-777777777777",
     title: "Fight Club",
     rating: 8,
     created_at: new Date(2022, 6, 20).toISOString(),
@@ -58,7 +58,7 @@ export const mockMovies: Movie[] = [
       "https://m.media-amazon.com/images/M/MV5BMmEzNTkxYjQtZTc0MC00YTVjLTg5ZTEtZWMwOWVlYzY0NWIwXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_.jpg",
   },
   {
-    _id: "8h9i0j1k-2l3m-4n5o-6p7q-8r9s0t1u2v3w",
+    _id: "88888888-8888-8888-8888-888888888888",
     title: "Forrest Gump",
     rating: 8,
     created_at: new Date(2022, 7, 25).toISOString(),
@@ -85,7 +85,7 @@ const reviewIds = {
 export const mockReviews: Review[] = [
   {
     _id: reviewIds.darkKnight1,
-    movie_id: "1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p", // The Dark Knight
+    movie_id: "11111111-1111-1111-1111-111111111111", // The Dark Knight
     user_id: uuidv4(),
     title: "Amazing movie!",
     review_text:
@@ -105,7 +105,7 @@ export const mockReviews: Review[] = [
   },
   {
     _id: reviewIds.darkKnight2,
-    movie_id: "1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p", // The Dark Knight
+    movie_id: "11111111-1111-1111-1111-111111111111", // The Dark Knight
     user_id: uuidv4(),
     title: "Overrated and too dark",
     review_text:
@@ -125,7 +125,7 @@ export const mockReviews: Review[] = [
   },
   {
     _id: reviewIds.inception1,
-    movie_id: "2b3c4d5e-6f7g-8h9i-0j1k-2l3m4n5o6p7q", // Inception
+    movie_id: "22222222-2222-2222-2222-222222222222", // Inception
     user_id: uuidv4(),
     title: "Mind-bending experience",
     review_text:
@@ -145,7 +145,7 @@ export const mockReviews: Review[] = [
   },
   {
     _id: reviewIds.inception2,
-    movie_id: "2b3c4d5e-6f7g-8h9i-0j1k-2l3m4n5o6p7q", // Inception
+    movie_id: "22222222-2222-2222-2222-222222222222", // Inception
     user_id: uuidv4(),
     title: "Too complicated for its own good",
     review_text:
@@ -165,7 +165,7 @@ export const mockReviews: Review[] = [
   },
   {
     _id: reviewIds.interstellar1,
-    movie_id: "3c4d5e6f-7g8h-9i0j-1k2l-3m4n5o6p7q8r", // Interstellar
+    movie_id: "33333333-3333-3333-3333-333333333333", // Interstellar
     user_id: uuidv4(),
     title: "Overrated sci-fi",
     review_text:
@@ -183,7 +183,7 @@ export const mockReviews: Review[] = [
   },
   {
     _id: reviewIds.shawshank1,
-    movie_id: "4d5e6f7g-8h9i-0j1k-2l3m-4n5o6p7q8r9s", // The Shawshank Redemption
+    movie_id: "44444444-4444-4444-4444-444444444444", // The Shawshank Redemption
     user_id: uuidv4(),
     title: "A masterpiece",
     review_text:
@@ -201,7 +201,7 @@ export const mockReviews: Review[] = [
   },
   {
     _id: reviewIds.pulpFiction1,
-    movie_id: "5e6f7g8h-9i0j-1k2l-3m4n-5o6p7q8r9s0t", // Pulp Fiction
+    movie_id: "55555555-5555-5555-5555-555555555555", // Pulp Fiction
     user_id: uuidv4(),
     title: "Too violent",
     review_text:
@@ -244,7 +244,7 @@ export const mockReviews: Review[] = [
   },
   {
     _id: reviewIds.fightClub1,
-    movie_id: "7g8h9i0j-1k2l-3m4n-5o6p-7q8r9s0t1u2v", // Fight Club
+    movie_id: "66666666-6666-6666-6666-666666666666", // Fight Club
     user_id: uuidv4(),
     title: "Promotes dangerous ideas",
     review_text:
@@ -275,7 +275,7 @@ export const mockReviews: Review[] = [
   },
   {
     _id: reviewIds.forrestGump1,
-    movie_id: "8h9i0j1k-2l3m-4n5o-6p7q-8r9s0t1u2v3w", // Forrest Gump
+    movie_id: "77777777-7777-7777-7777-777777777777", // Forrest Gump
     user_id: uuidv4(),
     title: "Heartwarming story",
     review_text:
@@ -297,7 +297,7 @@ export const mockReviews: Review[] = [
 ]
 
 export const mockAIModeration: { [key: string]: AIModeration } = {
-  "7g8h9i0j-1k2l-3m4n-5o6p-7q8r9s0t1u2v": {
+  "66666666-6666-6666-6666-666666666666": {
     status: "rejected",
     tags: ["legal", "risky", "potentially_illegal"],
     issues: [

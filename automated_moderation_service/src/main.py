@@ -27,6 +27,10 @@ class KafkaReviewConsumer:
         self.consumer = AIOKafkaConsumer(
             settings.kafka.topic,
             bootstrap_servers=settings.kafka.bootstrap_servers,
+            group_id="automated_moderation_service",
+            auto_offset_reset="earliest",
+            enable_auto_commit=True,
+            auto_commit_interval_ms=5000,
         )
         await self.consumer.start()
 
