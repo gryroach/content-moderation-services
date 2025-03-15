@@ -15,13 +15,23 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    domains: ['localhost'],
   },
   experimental: {
     webpackBuildWorker: true,
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
-  reactStrictMode: true,
+  reactStrictMode: false,
+  basePath: '',
+  compiler: {
+    styledComponents: true,
+  },
+  output: 'standalone',
+  outputFileTracing: true,
+  webpack: (config) => {
+    return config;
+  },
   async rewrites() {
     return [
       // Proxy API requests to avoid CORS issues in development
