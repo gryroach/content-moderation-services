@@ -11,9 +11,9 @@ from starlette import status
 
 # project
 from api.v1.pagination import PaginationParams
-from documents.review import Review as ReviewDocument
+from documents.review import Review as ReviewDocument, Status
 from schemas.auth import JwtToken
-from schemas.review import CreateReviewData, StatusUpdate
+from schemas.review import CreateReviewData
 from services.jwt_token import JWTBearer
 from services.repositories.reviews import ReviewRepository
 from services.review_service import ReviewService, get_review_service
@@ -139,7 +139,8 @@ async def delete_review(
 )
 async def change_review_satus(
     review_id: UUID,
-    status_update: StatusUpdate,
+    status_update: Status,
+    moderation_comment: str,
     token_payload: Annotated[JwtToken, Depends(JWTBearer())],
     review_service: Annotated[ReviewService, Depends(get_review_service)],
 ) -> ReviewDocument:
@@ -152,5 +153,5 @@ async def change_review_satus(
     return await review_service.update_review_status(
         review_id=review_id,
         status_update=status_update,
-        moderator_id=token_payload.user,
+        moderation_comment=moderation_comment,
     )

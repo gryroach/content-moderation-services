@@ -21,6 +21,7 @@ STATIC_DIR = BASE_DIR / "static"
 class AppSettings(BaseSettings):
     project_name: str = Field(default="Manual Moderation API")
     api_production: bool = Field(default=True)
+    ugc_grpc_server_url: str = Field(default="ugc-grpc-server:50051")
 
     # Настройки Postgres
     db_user: str = Field(default="postgres")

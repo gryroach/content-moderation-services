@@ -58,7 +58,8 @@ class ModerationService:
         system_prompt = self.get_system_prompt()
         raw_response = self.repository.send_moderation_request(text, system_prompt)
         response = ChatResponse(**raw_response)
-        content = json.loads(response.choices[0].message.content)
+        message_content = response.choices[0].message.content.strip("```json\n")  # noqa: B005
+        content = json.loads(message_content)
         logger.info(content)
         self._validate_moderation_response(content)
         return ModerationResponse(**content)

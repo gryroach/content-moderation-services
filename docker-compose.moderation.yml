@@ -93,6 +93,24 @@ services:
     networks:
       - graduate_work_network
 
+  # gRPC сервер
+  moderation-grpc-server:
+    build:
+      context: .
+      dockerfile: ./manual_moderation_service/Dockerfile
+    container_name: moderation-grpc-server
+    image: moderation-api-image
+    entrypoint: ["uv", "run", "./src/grpc_server.py"]
+    restart: always
+    env_file:
+      - ./.env
+    ports:
+      - "50071:50051"
+    depends_on:
+      - moderator-db
+    networks:
+      - graduate_work_network
+
   # Сервис автоматической модерации
   moderation-auto:
     build:
