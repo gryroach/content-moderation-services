@@ -1,0 +1,43 @@
+server:
+  http_listen_port: 9080
+
+positions:
+  filename: /tmp/positions.yaml
+
+client:
+  url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  #  Указываем как цель системный журнал
+  - job_name: journal
+    journal:
+      max_age: 12h
+      labels:
+        service: "graduate_work"
+        project: "graduate_work"
+        tag: "graduate_work"
+      path: /var/log/journal
+    relabel_configs:
+      - source_labels:
+          - __journal__systemd_unit
+        target_label: systemd_unit
+      - source_labels:
+          - __journal__hostname
+        target_label: nodename
+      - source_labels:
+          - __journal_syslog_identifier
+        target_label: syslog_identifier
+
+  #  Указываем как цель логи докера
+  - job_name: container_logs
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 1m
+    relabel_configs:
+      - source_labels: ["__meta_docker_container_name"]
+        regex: "/(.*)"
+        target_label: "container"
+    pipeline_stages:
+      - static_labels:
+          service: "graduate_work"
+          project: "graduate_work"

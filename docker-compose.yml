@@ -42,27 +42,16 @@ services:
       dockerfile: ./ugc_api/Dockerfile
     container_name: ugc-grpc-server
     image: ugc-api-image
-    entrypoint: ["uv", "run", "./src/grpc_server.py"]
+    entrypoint: ["bash", "grpc_entrypoint.sh"]
     restart: always
     env_file:
       - ./.env
     ports:
       - "50061:50051"
-    networks:
-      - graduate_work_network
-
-  ugc-api-test:
-    build:
-      context: .
-      dockerfile: ./ugc_api/Dockerfile.test
-    container_name: ugc-api-test
-    image: ugc-api-test-image
-    env_file:
-      - ./.env
-    environment:
-      - SENTRY_DSN=
     volumes:
-      - ./ugc_api/src:/app/src 
+      - ./ugc_api/src:/app/src
+      - ./ugc_api/grpc_entrypoint.sh:/app/grpc_entrypoint.sh
+      - ./grpc_services:/app/src/grpc_services
     networks:
       - graduate_work_network
 

@@ -96,7 +96,7 @@ class GigaChatRepository:
                 "Accept": "application/json",
                 "Authorization": f"Bearer {token}",
             }
-
+            logger.debug(f"Text: {text}, System prompt: {system_prompt}, Config: {self.config}")
             payload = json.dumps(
                 {
                     **self.config["model_params"],
@@ -114,6 +114,7 @@ class GigaChatRepository:
             )
             response.raise_for_status()
             response_json = response.json()
+            logger.debug(f"Ответ от API: {response_json}")
             # Проверяем структуру ответа
             self.validate_api_response(response_json)
             return response_json

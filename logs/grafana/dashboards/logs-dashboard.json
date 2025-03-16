@@ -1,0 +1,1097 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "description": "Логи всех выбранных контейнеров",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false,
+        "limit": 200
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "{container=~\"$container\"}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Логи всех выбранных контейнеров",
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "description": "Поиск логов по выбранному уровню (ERROR, WARNING и т.д.)",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "id": 7,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false,
+        "limit": 200
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "{container=~\"$container\"} |= \"${log_level:raw}\"",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Поиск по уровню логов: ${log_level:raw}",
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "description": "Поиск логов по произвольному тексту",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 9,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false,
+        "limit": 200
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "{container=~\"$container\"} |= \"${search_text:raw}\"",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Поиск по тексту: ${search_text:raw}",
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "description": "Статистика типов логов в реальном времени",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Количество событий",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 35,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 3,
+            "pointSize": 6,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ERROR"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WARNING"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "INFO"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DEBUG"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 16,
+        "x": 0,
+        "y": 8
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max", "sum"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"$container\"} |= \"ERROR\" [$__interval]))",
+          "legendFormat": "ERROR",
+          "queryType": "range",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"$container\"} |= \"WARNING\" [$__interval]))",
+          "hide": false,
+          "legendFormat": "WARNING",
+          "queryType": "range",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"$container\"} |= \"INFO\" [$__interval]))",
+          "hide": false,
+          "legendFormat": "INFO",
+          "queryType": "range",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"$container\"} |= \"DEBUG\" [$__interval]))",
+          "hide": false,
+          "legendFormat": "DEBUG",
+          "queryType": "range",
+          "refId": "D"
+        }
+      ],
+      "title": "Количество сообщений по типам логов",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "description": "Статистика HTTP запросов в NGINX",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 8
+      },
+      "id": 10,
+      "options": {
+        "displayLabels": ["percent", "name"],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": ["value", "percent"]
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": ["sum"],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \"GET \" [$__interval]))",
+          "legendFormat": "GET",
+          "queryType": "range",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \"POST \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "POST",
+          "queryType": "range",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \"PUT \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "PUT",
+          "queryType": "range",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \"DELETE \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "DELETE",
+          "queryType": "range",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \"PATCH \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "PATCH",
+          "queryType": "range",
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \"OPTIONS \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "OPTIONS",
+          "queryType": "range",
+          "refId": "F"
+        }
+      ],
+      "title": "HTTP методы NGINX",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "description": "Статистика HTTP статусов NGINX",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/2\\d{2}/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/3\\d{2}/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/4\\d{2}/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/5\\d{2}/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 16
+      },
+      "id": 11,
+      "options": {
+        "displayLabels": ["percent", "name"],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": ["value", "percent"]
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": ["sum"],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \" 200 \" [$__interval]))",
+          "legendFormat": "200 OK",
+          "queryType": "range",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \" 201 \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "201 Created",
+          "queryType": "range",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \" 204 \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "204 No Content",
+          "queryType": "range",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \" 30[0-9] \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "3xx Redirect",
+          "queryType": "range",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \" 400 \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "400 Bad Request",
+          "queryType": "range",
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \" 401 \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "401 Unauthorized",
+          "queryType": "range",
+          "refId": "F"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \" 403 \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "403 Forbidden",
+          "queryType": "range",
+          "refId": "G"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \" 404 \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "404 Not Found",
+          "queryType": "range",
+          "refId": "H"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \" 5[0-9][0-9] \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "5xx Server Error",
+          "queryType": "range",
+          "refId": "I"
+        }
+      ],
+      "title": "HTTP статусы NGINX",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "description": "Комбинации HTTP методов и статусов в NGINX",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/ 2\\d{2}$/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/ 4\\d{2}$/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/ 5\\d{2}$/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 0,
+        "y": 16
+      },
+      "id": 12,
+      "options": {
+        "displayLabels": ["percent"],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": ["value", "percent"]
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": ["sum"],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \"GET .* 200 \" [$__interval]))",
+          "legendFormat": "GET 200",
+          "queryType": "range",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \"GET .* 404 \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "GET 404",
+          "queryType": "range",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \"GET .* 403 \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "GET 403",
+          "queryType": "range",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \"GET .* 500 \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "GET 500",
+          "queryType": "range",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \"POST .* 200 \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "POST 200",
+          "queryType": "range",
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \"POST .* 201 \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "POST 201",
+          "queryType": "range",
+          "refId": "F"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \"POST .* 400 \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "POST 400",
+          "queryType": "range",
+          "refId": "G"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \"PUT .* 200 \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "PUT 200",
+          "queryType": "range",
+          "refId": "H"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \"PUT .* 204 \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "PUT 204",
+          "queryType": "range",
+          "refId": "I"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "sum(count_over_time({container=~\"ugc-nginx|nginx\"} |~ \"DELETE .* 204 \" [$__interval]))",
+          "hide": false,
+          "legendFormat": "DELETE 204",
+          "queryType": "range",
+          "refId": "J"
+        }
+      ],
+      "title": "Популярные комбинации метод/статус NGINX",
+      "type": "piechart"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 5,
+      "panels": [],
+      "repeat": "container",
+      "repeatDirection": "h",
+      "title": "Логи контейнера: $container",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "description": "Детальные логи выбранного контейнера",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "id": 6,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false,
+        "limit": 200
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "builder",
+          "expr": "{container=\"$container\"}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Логи контейнера: $container",
+      "type": "logs",
+      "repeatIteration": null,
+      "repeatPanelId": null,
+      "repeatedByRow": true
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["logs", "graduate_work"],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "Loki",
+          "value": "Loki"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Источник данных",
+        "multi": false,
+        "name": "DS_LOKI",
+        "options": [],
+        "query": "loki",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "moderation-api",
+            "moderation-auto",
+            "moderation-frontend-dev",
+            "moderation-grpc-server",
+            "ugc-api",
+            "ugc-nginx",
+            "ugc-grpc-server"
+          ],
+          "value": [
+            "moderation-api",
+            "moderation-auto",
+            "moderation-frontend-dev",
+            "moderation-grpc-server",
+            "ugc-api",
+            "ugc-nginx",
+            "ugc-grpc-server"
+          ]
+        },
+        "datasource": {
+          "type": "loki",
+          "uid": "${DS_LOKI}"
+        },
+        "definition": "label_values(container)",
+        "description": "Выберите контейнеры для отображения логов",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Контейнер",
+        "multi": true,
+        "name": "container",
+        "options": [],
+        "query": "label_values(container)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "ERROR",
+          "value": "ERROR"
+        },
+        "description": "Ключевое слово для поиска в логах",
+        "hide": 0,
+        "label": "Тип лога",
+        "name": "log_level",
+        "options": [
+          {
+            "selected": true,
+            "text": "ERROR",
+            "value": "ERROR"
+          },
+          {
+            "selected": false,
+            "text": "WARNING",
+            "value": "WARNING"
+          },
+          {
+            "selected": false,
+            "text": "INFO",
+            "value": "INFO"
+          },
+          {
+            "selected": false,
+            "text": "DEBUG",
+            "value": "DEBUG"
+          }
+        ],
+        "query": "ERROR,WARNING,INFO,DEBUG",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "",
+          "value": ""
+        },
+        "description": "Произвольный текст для поиска в логах",
+        "hide": 0,
+        "label": "Текст для поиска",
+        "name": "search_text",
+        "options": [
+          {
+            "selected": true,
+            "text": "",
+            "value": ""
+          }
+        ],
+        "query": "",
+        "skipUrlSync": false,
+        "type": "textbox"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Graduate Work Logs",
+  "uid": "graduate-work-logs",
+  "version": 1,
+  "weekStart": ""
+} 

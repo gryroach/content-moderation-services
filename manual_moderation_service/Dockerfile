@@ -8,7 +8,7 @@ WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-ENV PYTHONPATH=".:./src"
+ENV PYTHONPATH="./src"
 
 # Copy dependencies into the container.
 COPY ./manual_moderation_service/pyproject.toml .
@@ -20,6 +20,7 @@ COPY ./manual_moderation_service/alembic.ini .
 COPY ./manual_moderation_service/src ./src
 COPY ./manual_moderation_service/keys ./keys
 COPY ./manual_moderation_service/entrypoint-api.sh .
-COPY ./grpc_services ./grpc_services
+COPY ./manual_moderation_service/grpc_entrypoint.sh .
+COPY ./grpc_services ./src/grpc_services
 
 ENTRYPOINT ["bash", "/app/entrypoint-api.sh"]

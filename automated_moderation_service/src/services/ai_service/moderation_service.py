@@ -43,6 +43,6 @@ class AIModerationService:
             return status, auto_moderation_result
 
         except Exception as error:
-            logger.error(f"Ошибка при модерации текста: {error}")
+            logger.error(f"Ошибка при модерации текста: {error}", exc_info=True)
             # В случае ошибки отправляем на ручную модерацию
             return ModerationStatus.PENDING, f"Ошибка AI-модерации: {error}"

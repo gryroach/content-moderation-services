@@ -1,43 +1,20 @@
 version: '3.4'
 
 services:
-  # Сервис модерации - production версия
-  moderation-frontend:
-    profiles: ["prod"]  # Запускается только с профилем prod
-    build:
-      context: ./moderation_frontend
-      dockerfile: Dockerfile
-    container_name: moderation-frontend
-    restart: always
-    expose:
-      - "3000"
-    environment:
-      - NODE_ENV=production
-    env_file:
-      - ./moderation_frontend/.env
-    networks:
-      - graduate_work_network
-    volumes:
-      - moderation-frontend-node-modules:/app/node_modules
-      - moderation-frontend-next:/app/.next
-    depends_on:
-      - moderation-api
-
-  # Сервис модерации - dev версия с горячей перезагрузкой
+  # Сервис модерации - dev версия
   moderation-frontend-dev:
-    profiles: ["dev"]  # Запускается только с профилем dev
     build:
       context: ./moderation_frontend
       dockerfile: Dockerfile.dev
     container_name: moderation-frontend-dev
     restart: always
-    command: npm run dev
     ports:
-      - "3000:3000"
+      - "3001:3000"  # Добавляем прямое открытие порта для теста
     expose:
-      - "3000"
+      - "3000"  # Только expose, порт будем использовать через nginx
     environment:
       - NODE_ENV=development
+      - HOSTNAME=0.0.0.0
     env_file:
       - ./moderation_frontend/.env
     networks:
@@ -88,6 +65,7 @@ services:
       - "8011:8000"
     volumes:
       - ./manual_moderation_service/src:/app/src
+      - ./grpc_services:/app/src/grpc_services
     depends_on:
       - moderator-db
     networks:
@@ -100,12 +78,14 @@ services:
       dockerfile: ./manual_moderation_service/Dockerfile
     container_name: moderation-grpc-server
     image: moderation-api-image
-    entrypoint: ["uv", "run", "./src/grpc_server.py"]
+    entrypoint: ["bash", "/app/grpc_entrypoint.sh"]
     restart: always
     env_file:
       - ./.env
     ports:
       - "50071:50051"
+    volumes:
+      - ./manual_moderation_service/grpc_entrypoint.sh:/app/grpc_entrypoint.sh
     depends_on:
       - moderator-db
     networks:
@@ -124,15 +104,14 @@ services:
       - ./.env
     networks:
       - graduate_work_network
-
+    depends_on:
+      - moderation-grpc-server
 networks:
   graduate_work_network:
     name: graduate_work_network
     external: true
 
 volumes:
-  moderation-frontend-node-modules:
-  moderation-frontend-next:
   moderation-frontend-dev-node-modules:
   moderation-frontend-dev-next:
   moderator_data:

@@ -51,7 +51,7 @@ class GigaChatSettings(BaseSettings):
     scope: str = Field(default="GIGACHAT_API_PERS")
     model: str = Field(default="GigaChat")
     temperature: float = Field(default=0.0)
-    max_tokens: int = Field(default=1024)
+    max_tokens: int = Field(default=4096)
     timeout: float = Field(default=10.0)
     ssl_verify: bool = Field(default=False)
 
