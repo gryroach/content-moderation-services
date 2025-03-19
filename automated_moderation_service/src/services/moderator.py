@@ -8,6 +8,7 @@ from nltk import word_tokenize
 # project
 from core.config import settings, stemmer_en, stemmer_ru
 from core.constants import FAST_MODERATION_FAIL_MESSAGE, ModerationStatus
+from schemas.review_data import ReviewData
 from services.ai_service import AIModerationService
 from services.review_service import ReviewService
 
@@ -17,20 +18,14 @@ logger = logging.getLogger(__name__)
 class Moderator:
     """Сервис для модерации отзывов."""
 
-    def __init__(self, review_title: str, review_text: str, review_id: str, user_id: str, movie_id: str) -> None:
+    def __init__(self, review_data: ReviewData) -> None:
         """Инициализирует модератор.
 
         Args:
-            review_title: Заголовок отзыва
-            review_text: Текст отзыва
-            review_id: Идентификатор отзыва
+            review_data: Данные отзыва
         """
-        self.combined_text = f"{review_title}\n\n{review_text}"
-        self.review_title = review_title
-        self.review_text = review_text
-        self.user_id = user_id
-        self.movie_id = movie_id
-        self.review_id = review_id
+        self.combined_text = f"{review_data.title}\n\n{review_data.text}"
+        self.review_data = review_data
         self.banned_stems: set[str] = {stemmer_ru.stem(word) for word in settings.moderation.banned_words} | {
             stemmer_en.stem(word) for word in settings.moderation.banned_words
         }
@@ -44,7 +39,7 @@ class Moderator:
         # Выполняем быструю модерацию всего текста (заголовок + содержание)
         if not self.fast_moderate(self.combined_text):
             await ReviewService.update_status(
-                review_id=self.review_id,
+                review_id=self.review_data.review_id,
                 status=ModerationStatus.REJECTED,
                 comment=FAST_MODERATION_FAIL_MESSAGE,
             )
@@ -57,7 +52,7 @@ class Moderator:
             ModerationStatus.REJECTED,
         ):
             await ReviewService.update_status(
-                review_id=self.review_id,
+                review_id=self.review_data.review_id,
                 status=ai_status,
                 comment=ai_comment,
             )
@@ -65,11 +60,11 @@ class Moderator:
 
         # Если AI не уверен, отправляем на ручную модерацию
         await ReviewService.send_to_manual_moderation(
-            review_id=self.review_id,
-            review_title=self.review_title,
-            review_text=self.review_text,
-            user_id=self.user_id,
-            movie_id=self.movie_id,
+            review_id=self.review_data.review_id,
+            review_title=self.review_data.title,
+            review_text=self.review_data.text,
+            user_id=self.review_data.user_id,
+            movie_id=self.review_data.movie_id,
             comment=ai_comment,
         )
 

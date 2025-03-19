@@ -38,7 +38,11 @@ class ReviewRepository(RatingRepository[Review, CreateReview, UpdateReview]):
         return documents
 
     async def get(
-        self, document_id: UUID, filters: dict | None = None, request_user: UUID | None = None, get_all: bool = False
+        self,
+        document_id: UUID,
+        filters: dict[str, Any] | None = None,
+        request_user: UUID | None = None,
+        get_all: bool = False,
     ) -> DocumentType:
         query = self._create_query(filters=filters, request_user=request_user, get_all=get_all)
         query["_id"] = document_id

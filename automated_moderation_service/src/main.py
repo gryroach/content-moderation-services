@@ -9,6 +9,7 @@ from aiokafka import AIOKafkaConsumer
 # project
 from core.config import settings
 from core.constants import EventType, ModerationStatus
+from schemas.review_data import ReviewData
 from services.moderator import Moderator
 from services.review_service import ReviewService
 
@@ -29,13 +30,12 @@ class KafkaReviewConsumer:
             bootstrap_servers=settings.kafka.bootstrap_servers,
             group_id="automated_moderation_service",
             auto_offset_reset="earliest",
-            enable_auto_commit=True,
-            auto_commit_interval_ms=5000,
+            enable_auto_commit=False,
         )
         await self.consumer.start()
 
     @staticmethod
-    async def handle_message(message: dict) -> None:
+    async def handle_message(message: dict[str, str]) -> None:
         """Обрабатывает сообщение из Kafka.
 
         Args:
@@ -48,18 +48,15 @@ class KafkaReviewConsumer:
             EventType.REVIEW_CREATED,
             EventType.REVIEW_STATUS_UPDATED,
         }:
-            review_title = message.get("title", "")
-            review_text = message.get("review_text", "")
-            user_id = message.get("user_id")
-            movie_id = message.get("movie_id")
-
-            moderator_service = Moderator(
-                review_title=review_title,
-                review_text=review_text,
+            review_data = ReviewData(
                 review_id=review_id,
-                user_id=user_id,
-                movie_id=movie_id,
+                title=message.get("title", ""),
+                text=message.get("review_text", ""),
+                user_id=message.get("user_id"),
+                movie_id=message.get("movie_id"),
             )
+
+            moderator_service = Moderator(review_data)
             await moderator_service.moderate_review()
         elif event_type == EventType.REVIEW_DELETED and message.get("status") == ModerationStatus.PENDING:
             await ReviewService.delete_from_manual_moderation(review_id)
@@ -72,6 +69,7 @@ class KafkaReviewConsumer:
             async for msg in self.consumer:
                 message = orjson.loads(msg.value)
                 await self.handle_message(message)
+                await self.consumer.commit()
         finally:
             await self.consumer.stop()
 

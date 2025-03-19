@@ -25,7 +25,7 @@ class BaseRepository(Generic[DocumentType, CreateSchemaType, UpdateSchemaType]):
         await document.insert()
         return document
 
-    async def get(self, document_id: UUID, filters: dict | None = None) -> DocumentType:
+    async def get(self, document_id: UUID, filters: dict[str, Any] | None = None) -> DocumentType:
         query = self._create_query(filters=filters)
         query["_id"] = document_id
         document = await self.model.find_one(query)

@@ -21,7 +21,7 @@ app = FastAPI(
 # Настройка CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Можно указать конкретные домены, например ["http://localhost:3000"]
+    allow_origins=["http://127.0.0.1", "http://localhost"],
     allow_credentials=True,
     allow_methods=["*"],  # Разрешаем все методы, включая OPTIONS
     allow_headers=["*"],
