@@ -15,7 +15,7 @@ endef
 
 # Список всех целей Makefile, требующих инициализации сети
 NETWORK_TARGETS := run-all run-core run-moderation run-moderation-api run-moderation-frontend run-moderation-frontend-prod \
-                  run-moderation-fullstack run-mongo run-kafka ps-all ps-core ps-moderation ps-kafka ps-mongo \
+                  run-moderation-fullstack run-mongo run-kafka run-logs ps-all ps-core ps-moderation ps-kafka ps-mongo ps-logs \
                   init-db create-dbuser test
 
 # Добавляем зависимость от init-networks ко всем целям из NETWORK_TARGETS
@@ -62,6 +62,11 @@ run-mongo:
 run-kafka:
 	docker compose -f docker-compose.kafka.yml up -d --build
 
+# Запуск системы мониторинга логов
+run-logs:
+	docker compose -f docker-compose.logs.yml up -d --build
+	@echo "Система мониторинга логов запущена. Grafana доступна по адресу: http://localhost:3000"
+
 # Эти команды не требуют init-networks, поэтому оставляем их без изменений
 down-moderation-frontend:
 	./stop-moderation.sh
@@ -81,7 +86,7 @@ down-moderation-fullstack: down-moderation
 	@echo "Полный стек модерации остановлен"
 
 # Остановка всех сервисов
-down-all: down-core down-moderation
+down-all: down-core down-moderation down-mongo down-kafka down-logs
 	./init-networks.sh clean
 
 # Остановка только основных сервисов
@@ -99,8 +104,21 @@ down-kafka:
 	@echo "Остановка Kafka..."
 	docker compose -f docker-compose.kafka.yml down
 
+# Остановка системы мониторинга логов
+down-logs:
+	@echo "Остановка системы мониторинга логов..."
+	docker compose -f docker-compose.logs.yml down
+
 # Логи и статусы не требуют сетей напрямую, но могут показывать ошибки, если сети нет
 logs-all:
+	@echo "Для просмотра логов всех сервисов используйте следующие команды:"
+	@echo "  make logs-core            - Логи основных сервисов"
+	@echo "  make logs-mongo           - Логи MongoDB"
+	@echo "  make logs-kafka           - Логи Kafka"
+	@echo "  make logs-moderation      - Логи модерации"
+	@echo "  make logs-logs            - Логи системы мониторинга"
+
+logs-core:
 	$(COMPOSE_CMD) logs -f
 
 logs-moderation:
@@ -112,8 +130,11 @@ logs-kafka:
 logs-mongo:
 	docker compose -f docker-compose.mongodb.yml logs -f
 
+logs-logs:
+	docker compose -f docker-compose.logs.yml logs -f
+
 # Просмотр статуса всех сервисов
-ps-all: ps-core ps-moderation
+ps-all: ps-core ps-moderation ps-mongo ps-kafka ps-logs
 
 # Просмотр статуса основных сервисов
 ps-core:
@@ -130,6 +151,10 @@ ps-kafka:
 # Просмотр статуса MongoDB
 ps-mongo:
 	docker compose -f docker-compose.mongodb.yml ps
+
+# Просмотр статуса системы мониторинга логов
+ps-logs:
+	docker compose -f docker-compose.logs.yml ps
 
 # Инициализация шардов MongoDB
 init-db:
@@ -166,6 +191,7 @@ help:
 	@echo "  run-core                 - Запуск только основных сервисов (nginx, ugc-api)"
 	@echo "  run-mongo                - Запуск только MongoDB"
 	@echo "  run-kafka                - Запуск только Kafka"
+	@echo "  run-logs                 - Запуск системы мониторинга логов"
 	@echo "  run-moderation           - Запуск всех сервисов модерации"
 	@echo "  run-moderation-api       - Запуск API и БД модерации"
 	@echo "  run-moderation-frontend  - Запуск сервиса модерации в режиме разработки"
@@ -175,25 +201,29 @@ help:
 	@echo "  down-core                - Остановка основных сервисов"
 	@echo "  down-mongo               - Остановка MongoDB"
 	@echo "  down-kafka               - Остановка Kafka"
+	@echo "  down-logs                - Остановка системы мониторинга логов"
 	@echo "  down-moderation          - Остановка всех сервисов модерации"
 	@echo "  down-moderation-frontend - Остановка frontend сервиса модерации"
 	@echo "  get-token                - Получение токена доступа к API"
-	@echo "  logs-all                 - Просмотр логов всех сервисов"
+	@echo "  logs-all                 - Просмотр опций для логов"
+	@echo "  logs-core                - Просмотр логов основных сервисов"
 	@echo "  logs-kafka               - Просмотр логов Kafka"
 	@echo "  logs-mongo               - Просмотр логов MongoDB"
+	@echo "  logs-logs                - Просмотр логов системы мониторинга"
 	@echo "  logs-moderation          - Просмотр логов модерации"
 	@echo "  ps-all                   - Просмотр статуса всех сервисов"
 	@echo "  ps-kafka                 - Просмотр статуса Kafka"
 	@echo "  ps-mongo                 - Просмотр статуса MongoDB"
+	@echo "  ps-logs                  - Просмотр статуса системы мониторинга логов"
 	@echo "  ps-moderation            - Просмотр статуса сервисов модерации"
 	@echo "  init-db                  - Инициализация шардов MongoDB"
 	@echo "  create-dbuser            - Создание пользователя MongoDB"
 	@echo "  init-networks            - Создание необходимых Docker сетей"
 	@echo "  test                     - Запуск тестов"
 
-.PHONY: run-all run-core run-mongo run-kafka run-moderation run-moderation-api \
+.PHONY: run-all run-core run-mongo run-kafka run-logs run-moderation run-moderation-api \
         run-moderation-frontend run-moderation-frontend-prod run-moderation-fullstack \
-        down-all down-core down-mongo down-kafka down-moderation down-moderation-frontend \
-        logs-all logs-kafka logs-mongo logs-moderation \
-        ps-all ps-core ps-mongo ps-kafka ps-moderation \
+        down-all down-core down-mongo down-kafka down-logs down-moderation down-moderation-frontend \
+        logs-all logs-core logs-kafka logs-mongo logs-logs logs-moderation \
+        ps-all ps-core ps-mongo ps-kafka ps-logs ps-moderation \
         init-db create-dbuser test help init-networks $(NETWORK_TARGETS)
