@@ -40,14 +40,39 @@ const formatNumber = (num: number): string => {
 }
 
 const LandingPage = () => {
-  const [params, setParams] = useState<{
-    requests: number,
-    trafficPercentage: number,
-    manualModeration: number,
-  }>({
-    requests: 1000000,
-    trafficPercentage: 15,
-    manualModeration: 20,
+  // Параметры расчетов
+  const [params, setParams] = useState({
+    requestsPerMonth: 50000,        // Количество запросов в месяц
+    tokensPerRequest: 1000,           // Количество токенов на запрос
+    apiCostPerToken: 0.000015,          // Стоимость API за токен (используется для OpenAI)
+    cloudCostPerMonth: 15000,         // Стоимость облака в месяц
+    tokensPerInstance: 2500000,       // Токенов на инстанс
+    serverCostPerMonth: 30000,        // Стоимость сервера в месяц
+    serverMaintenanceCost: 5000,      // Поддержка сервера
+    tokensPerServer: 5000000,         // Токенов на сервер
+    gpuCostPerMonth: 20000,           // Стоимость GPU в месяц
+    serverLeaseCostPerMonth: 15000,   // Стоимость лизинга сервера в месяц
+    serverLeaseMaintenanceCost: 2500, // Поддержка при лизинге
+    serverAdditionalCostFactor: 1.2,  // Дополнительные расходы для сервера (фактор)
+    leaseAdditionalCostFactor: 1.1,   // Дополнительные расходы для лизинга (фактор)
+    gpuInstanceCostPerMonth: 40000,   // Стоимость GPU инстанса в облаке
+    tokensPerGpuInstance: 7000000,    // Токенов на GPU инстанс
+    tokensPerGpuServer: 10000000,     // Токенов на GPU сервер
+    apiDiscount1: 5000000,            // Порог для первой скидки API
+    apiDiscount1Value: 0.9,           // Значение первой скидки (10%)
+    apiDiscount2: 10000000,           // Порог для второй скидки API
+    apiDiscount2Value: 0.8,           // Значение второй скидки (20%)
+    apiCustomDiscount1: 5000000,        // Порог для первой скидки Custom API
+    apiCustomDiscount1Value: 0.92,      // Значение первой скидки (8%)
+    apiCustomDiscount2: 10000000,       // Порог для второй скидки Custom API
+    apiCustomDiscount2Value: 0.85,      // Значение второй скидки (15%)
+    apiCustom2Discount1: 5000000,       // Порог для первой скидки Custom API 2
+    apiCustom2Discount1Value: 0.95,     // Значение первой скидки (5%)
+    apiCustom2Discount2: 10000000,      // Порог для второй скидки Custom API 2
+    apiCustom2Discount2Value: 0.9,      // Значение второй скидки (10%)
+    apiBaseCostPerToken: 0.0001,        // Базовая стоимость OpenAI за токен
+    apiCustomBaseCostPerToken: 0.00015, // Базовая стоимость Custom API 1 за токен
+    apiCustom2BaseCostPerToken: 0.00005 // Базовая стоимость Custom API 2 за токен
   })
   
   const [activeTab, setActiveTab] = useState('scenario1')
@@ -67,13 +92,19 @@ const LandingPage = () => {
     'Выделенный сервер': 0,
   })
   const chartRef = useRef<HTMLDivElement>(null)
-  const [chartData, setChartData] = useState<Array<{ requests: number, api: number, cloud: number, server: number }>>([])
+  const [chartData, setChartData] = useState<Array<{ requests: number, api: number, cloud: number, gpuCloud: number, server: number, lease: number, gpuServer: number }>>([])
   const [intersectionPoints, setIntersectionPoints] = useState<{
     apiVsServer: string,
-    cloudVsServer: string
+    cloudVsServer: string,
+    apiVsLease: string,
+    cloudVsLease: string,
+    leaseVsServer: string
   }>({
     'apiVsServer': '3200000',
-    'cloudVsServer': '7500000'
+    'cloudVsServer': '7500000',
+    'apiVsLease': '2500000',
+    'cloudVsLease': '5000000',
+    'leaseVsServer': '1800000'
   })
   
   // Восстанавливаем переменную для расширенного режима
@@ -156,103 +187,164 @@ const LandingPage = () => {
   useEffect(() => {
     // Используем параметры из состояния
     const { 
-      requests, 
-      trafficPercentage, 
-      manualModeration
+      requestsPerMonth, 
+      tokensPerRequest, 
+      apiCostPerToken, 
+      cloudCostPerMonth,
+      tokensPerInstance,
+      serverCostPerMonth,
+      serverMaintenanceCost,
+      tokensPerServer,
+      gpuCostPerMonth,
+      serverLeaseCostPerMonth,
+      serverLeaseMaintenanceCost,
+      serverAdditionalCostFactor,
+      leaseAdditionalCostFactor,
+      gpuInstanceCostPerMonth,
+      tokensPerGpuInstance,
+      tokensPerGpuServer,
+      apiDiscount1, 
+      apiDiscount1Value, 
+      apiDiscount2, 
+      apiDiscount2Value
     } = params
     
-    const totalTokens = requests * trafficPercentage / 100;
+    const totalTokens = requestsPerMonth * tokensPerRequest;
     
     // Дисконты на основе объема
-    let costPerToken = 0.0001
-    if (totalTokens >= 10_000_000) {
-      costPerToken *= 0.8
-    } else if (totalTokens >= 5_000_000) {
-      costPerToken *= 0.9
+    let costPerToken = apiCostPerToken
+    if (totalTokens >= apiDiscount2) {
+      costPerToken *= apiDiscount2Value
+    } else if (totalTokens >= apiDiscount1) {
+      costPerToken *= apiDiscount1Value
     }
     
-    const apiCost = totalTokens * costPerToken
+    // Расчет стоимости API
+    const apiCost = totalTokens * costPerToken;
     
-    // Расчет стоимости облачного хостинга
-    const cloudCostPerRequest = (totalTokens / 1_000_000) * 100;
-    const cloudCost = 50000 + parseFloat(cloudCostPerRequest.toFixed(2));
+    // Расчет стоимости облачного хостинга (CPU)
+    const cloudInstancesNeeded = Math.ceil(totalTokens / tokensPerInstance);
+    const cloudCost = cloudCostPerMonth * cloudInstancesNeeded;
+    
+    // Расчет стоимости облачного хостинга (GPU)
+    const gpuCloudInstancesNeeded = Math.ceil(totalTokens / tokensPerGpuInstance);
+    const gpuCloudCost = gpuInstanceCostPerMonth * gpuCloudInstancesNeeded;
     
     // Расчет стоимости выделенного сервера
-    const additionalCostsFactor = 1.2
-    const serverInstances = Math.ceil(totalTokens / 1_000_000)
-    const serverCost = serverInstances * (100 + manualModeration) * additionalCostsFactor
+    const serversNeeded = Math.ceil(totalTokens / tokensPerServer);
+    const serverCost = serversNeeded * (serverCostPerMonth + serverMaintenanceCost + gpuCostPerMonth) * serverAdditionalCostFactor;
+    
+    // Расчет стоимости лизинга сервера
+    const leaseServersNeeded = Math.ceil(totalTokens / tokensPerServer);
+    const leaseCost = leaseServersNeeded * (serverLeaseCostPerMonth + serverLeaseMaintenanceCost) * leaseAdditionalCostFactor;
+    
+    // Расчет стоимости выделенного GPU сервера
+    const gpuServersNeeded = Math.ceil(totalTokens / tokensPerGpuServer);
+    const gpuServerCost = gpuServersNeeded * (serverCostPerMonth + serverMaintenanceCost + gpuCostPerMonth) * serverAdditionalCostFactor * 1.3; // Повышенный фактор для GPU сервера
     
     setCostData({
-      'API': Number(apiCost.toFixed(0)),
-      'Облачный хостинг': Number(cloudCost.toFixed(0)),
-      'Выделенный сервер': Number(serverCost.toFixed(0)),
+      'API': parseFloat(apiCost.toFixed(2)),
+      'CPU облако': parseFloat(cloudCost.toFixed(2)),
+      'GPU облако': parseFloat(gpuCloudCost.toFixed(2)),
+      'Выделенный сервер': parseFloat(serverCost.toFixed(2)),
+      'Лизинг сервера': parseFloat(leaseCost.toFixed(2)),
+      'GPU сервер': parseFloat(gpuServerCost.toFixed(2))
     })
-
+    
     // Расчет функции стоимости для разных объемов
     const calculateCostForRequests = (requests: number) => {
-      const tokens = requests * trafficPercentage / 100;
-      let apiTokenCost = 0.0001;
-      if (tokens >= 10_000_000) {
-        apiTokenCost *= 0.8;
-      } else if (tokens >= 5_000_000) {
-        apiTokenCost *= 0.9;
-      }
+      const tokens = requests * tokensPerRequest;
       
+      // API стоимость с учетом дисконтов
+      let apiTokenCost = apiCostPerToken;
+      if (tokens >= apiDiscount2) {
+        apiTokenCost *= apiDiscount2Value;
+      } else if (tokens >= apiDiscount1) {
+        apiTokenCost *= apiDiscount1Value;
+      }
       const api = tokens * apiTokenCost;
-      const cloud = Math.ceil(requests / 1_000_000) * 100;
-      const server = Math.ceil(requests / 1_000_000) * (100 + manualModeration) * additionalCostsFactor;
       
-      return { api, cloud, server };
-    };
+      // Облачный хостинг (CPU)
+      const cloudInstances = Math.ceil(tokens / tokensPerInstance);
+      const cloud = cloudInstances * cloudCostPerMonth;
+      
+      // Облачный хостинг (GPU)
+      const gpuCloudInstances = Math.ceil(tokens / tokensPerGpuInstance);
+      const gpuCloud = gpuCloudInstances * gpuInstanceCostPerMonth;
+      
+      // Выделенный сервер
+      const servers = Math.ceil(tokens / tokensPerServer);
+      const server = servers * (serverCostPerMonth + serverMaintenanceCost + gpuCostPerMonth) * serverAdditionalCostFactor;
+      
+      // Лизинг сервера
+      const leaseServers = Math.ceil(tokens / tokensPerServer);
+      const lease = leaseServers * (serverLeaseCostPerMonth + serverLeaseMaintenanceCost) * leaseAdditionalCostFactor;
+      
+      // GPU Сервер
+      const gpuServers = Math.ceil(tokens / tokensPerGpuServer);
+      const gpuServer = gpuServers * (serverCostPerMonth + serverMaintenanceCost + gpuCostPerMonth) * serverAdditionalCostFactor * 1.3;
+      
+      return { api, cloud, gpuCloud, server, lease, gpuServer };
+    }
+    
+    // Генерация данных для графика
+    const processData = () => {
+      // Генерация данных для графика
+      const maxRequests = params.requestsPerMonth * 5
+      const steps = 20
+      const requestsStep = maxRequests / steps
 
-    // Поиск точек инверсии (приблизительно)
-    let apiVsServer = 0;
-    let cloudVsServer = 0;
-    
-    // Генерируем данные для графика
-    const chartPoints: Array<{ requests: number, api: number, cloud: number, server: number }> = [];
-    
-    // Используем больше точек для плавного графика
-    const pointsCount = 20;
-    const stepSize = 10000000 / pointsCount;
-    
-    for (let r = 100000; r <= 10000000; r += stepSize) {
-      const costs = calculateCostForRequests(r);
+      // Создаем массив точек для графика
+      const data = Array.from({ length: steps + 1 }, (_, i) => {
+        const req = Math.round(i * requestsStep)
+        // Рассчитываем стоимость для каждого API
+        const costs = calculateCostForRequests(req)
+        
+        return {
+          requests: req,
+          api: costs.api,
+          cloud: costs.cloud,
+          gpuCloud: costs.gpuCloud,
+          server: costs.server,
+          lease: costs.lease,
+          gpuServer: costs.gpuServer
+        }
+      })
       
-      // Добавляем точку для графика
-      chartPoints.push({
-        requests: r,
-        api: costs.api,
-        cloud: costs.cloud,
-        server: costs.server
-      });
+      setChartData(data)
       
-      // Найдем точку, где API становится дороже сервера
-      if (apiVsServer === 0 && costs.api > costs.server) {
-        apiVsServer = r;
-      }
+      // Находим точки пересечения графиков
+      const apiVsServer = data.find(d => d.api >= d.server)?.requests
+      const cloudVsServer = data.find(d => d.cloud >= d.server)?.requests
+      const apiVsLease = data.find(d => d.api >= d.lease)?.requests
+      const cloudVsLease = data.find(d => d.cloud >= d.lease)?.requests
+      const leaseVsServer = data.find(d => d.lease >= d.server)?.requests
       
-      // Найдем точку, где облако становится дороже сервера
-      if (cloudVsServer === 0 && costs.cloud > costs.server) {
-        cloudVsServer = r;
-      }
+      setIntersectionPoints({
+        apiVsServer: apiVsServer ? apiVsServer.toString() : '3200000',
+        cloudVsServer: cloudVsServer ? cloudVsServer.toString() : '7500000',
+        apiVsLease: apiVsLease ? apiVsLease.toString() : '2500000',
+        cloudVsLease: cloudVsLease ? cloudVsLease.toString() : '5000000',
+        leaseVsServer: leaseVsServer ? leaseVsServer.toString() : '1800000'
+      })
+      
+      // Рассчитываем затраты для текущего количества запросов
+      const currentRequestsData = data.find(d => d.requests >= params.requestsPerMonth) || data[0]
+      setCostData({
+        'API': currentRequestsData.api,
+        'Облачный хостинг': currentRequestsData.cloud,
+        'Выделенный сервер': currentRequestsData.server,
+      })
+      
+      // Отрисовываем график с помощью SVG
+      drawChart(data)
     }
     
-    setChartData(chartPoints);
-    
-    setIntersectionPoints({
-      apiVsServer: apiVsServer || '3200000', // Если не нашли, используем значение по умолчанию
-      cloudVsServer: cloudVsServer || '7500000'
-    });
-    
-    // Рисуем график, если есть ref на элемент
-    if (chartRef.current) {
-      drawChart(chartPoints);
-    }
-  }, [params]);
+    processData()
+  }, [params.requestsPerMonth])
   
   // Функция для отрисовки графика
-  const drawChart = (data: Array<{ requests: number, api: number, cloud: number, server: number }>) => {
+  const drawChart = (data: Array<{ requests: number, api: number, cloud: number, gpuCloud: number, server: number, lease: number, gpuServer: number }>) => {
     if (!chartRef.current) return;
     
     const container = chartRef.current;
@@ -268,7 +360,10 @@ const LandingPage = () => {
     const maxCost = Math.max(
       ...data.map(d => d.api),
       ...data.map(d => d.cloud),
-      ...data.map(d => d.server)
+      ...data.map(d => d.gpuCloud),
+      ...data.map(d => d.server),
+      ...data.map(d => d.lease),
+      ...data.map(d => d.gpuServer)
     );
     
     // Создаем SVG элемент
@@ -326,15 +421,21 @@ const LandingPage = () => {
     // Подготавливаем данные для каждой линии
     const apiData = data.map(d => ({ requests: d.requests, value: d.api }));
     const cloudData = data.map(d => ({ requests: d.requests, value: d.cloud }));
+    const gpuCloudData = data.map(d => ({ requests: d.requests, value: d.gpuCloud }));
     const serverData = data.map(d => ({ requests: d.requests, value: d.server }));
+    const leaseData = data.map(d => ({ requests: d.requests, value: d.lease }));
+    const gpuServerData = data.map(d => ({ requests: d.requests, value: d.gpuServer }));
     
     drawLine(apiData, '#3B82F6'); // blue-500
     drawLine(cloudData, '#A855F7'); // purple-500
+    drawLine(gpuCloudData, '#6366F1'); // indigo-500
     drawLine(serverData, '#22C55E'); // green-500
+    drawLine(leaseData, '#F59E0B'); // amber-500
+    drawLine(gpuServerData, '#EF4444'); // red-500
     
     // Отмечаем точки инверсии
-    if (intersectionPoints.apiVsServer > 0) {
-      const apiVsServerPoint = data.find(d => d.requests >= intersectionPoints.apiVsServer);
+    if (parseInt(intersectionPoints.apiVsServer) > 0) {
+      const apiVsServerPoint = data.find(d => d.requests >= parseInt(intersectionPoints.apiVsServer));
       if (apiVsServerPoint) {
         const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         circle.setAttribute('cx', scaleX(apiVsServerPoint.requests).toString());
@@ -352,51 +453,17 @@ const LandingPage = () => {
         line.setAttribute('y2', (height - padding.bottom).toString());
         line.setAttribute('stroke', '#EF4444');
         line.setAttribute('stroke-width', '1');
-        line.setAttribute('stroke-dasharray', '2,2');
+        line.setAttribute('stroke-dasharray', '4,2');
         svg.appendChild(line);
         
-        // Подпись к точке
+        // Добавляем текст с количеством запросов
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', scaleX(apiVsServerPoint.requests).toString());
         text.setAttribute('y', (height - padding.bottom + 15).toString());
         text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('fill', '#EF4444');
+        text.setAttribute('fill', '#FFFFFF');
         text.setAttribute('font-size', '10');
         text.textContent = formatNumber(intersectionPoints.apiVsServer);
-        svg.appendChild(text);
-      }
-    }
-    
-    if (intersectionPoints.cloudVsServer > 0) {
-      const cloudVsServerPoint = data.find(d => d.requests >= intersectionPoints.cloudVsServer);
-      if (cloudVsServerPoint) {
-        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        circle.setAttribute('cx', scaleX(cloudVsServerPoint.requests).toString());
-        circle.setAttribute('cy', scaleY(cloudVsServerPoint.cloud).toString());
-        circle.setAttribute('r', '4');
-        circle.setAttribute('fill', '#EF4444'); // red-500
-        circle.setAttribute('class', 'animate-pulse');
-        svg.appendChild(circle);
-        
-        // Добавляем вертикальную линию к оси X
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', scaleX(cloudVsServerPoint.requests).toString());
-        line.setAttribute('y1', scaleY(cloudVsServerPoint.cloud).toString());
-        line.setAttribute('x2', scaleX(cloudVsServerPoint.requests).toString());
-        line.setAttribute('y2', (height - padding.bottom).toString());
-        line.setAttribute('stroke', '#EF4444');
-        line.setAttribute('stroke-width', '1');
-        line.setAttribute('stroke-dasharray', '2,2');
-        svg.appendChild(line);
-        
-        // Подпись к точке
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', scaleX(cloudVsServerPoint.requests).toString());
-        text.setAttribute('y', (height - padding.bottom + 15).toString());
-        text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('fill', '#EF4444');
-        text.setAttribute('font-size', '10');
-        text.textContent = formatNumber(intersectionPoints.cloudVsServer);
         svg.appendChild(text);
       }
     }
@@ -407,8 +474,11 @@ const LandingPage = () => {
     
     const legendItems = [
       { label: 'API', color: '#3B82F6' },
-      { label: 'Облако', color: '#A855F7' },
-      { label: 'Сервер', color: '#22C55E' }
+      { label: 'CPU облако', color: '#A855F7' },
+      { label: 'GPU облако', color: '#6366F1' },
+      { label: 'Сервер', color: '#22C55E' },
+      { label: 'Лизинг', color: '#F59E0B' },
+      { label: 'GPU сервер', color: '#EF4444' }
     ];
     
     legendItems.forEach((item, index) => {
@@ -434,62 +504,6 @@ const LandingPage = () => {
       svg.appendChild(text);
     });
   };
-
-  useEffect(() => {
-    // Рассчитываем и отрисовываем график при загрузке и изменении параметров
-    const processData = () => {
-      // Генерируем массив значений количества запросов (от 1 млн до 10 млн с шагом 1 млн)
-      const requestValues = Array.from({ length: 10 }, (_, i) => (i + 1) * 1000000)
-      
-      // Стоимость для различных решений при разном количестве запросов
-      const data = requestValues.map(req => {
-        // Расчеты на основе данных из research.py
-        // API: базовая стоимость 0.0001$ за токен
-        const tokenPrice = 0.0001
-        const tokensPerRequest = 1000 // Предполагаемое количество токенов на запрос
-        const apiCost = (req * tokensPerRequest * tokenPrice / 1000000).toFixed(2) // Стоимость в млн $
-        
-        // Облачный хостинг: базовая стоимость 50к$ + 0.00001$ за запрос
-        const cloudBaseCost = 50000
-        const cloudPerRequest = 0.00001
-        const cloudCost = (cloudBaseCost + req * cloudPerRequest).toFixed(2)
-        
-        // Сервер: фиксированная стоимость в 150к$
-        const serverCost = 150000
-        
-        return {
-          requests: req,
-          api: parseFloat(apiCost),
-          cloud: parseFloat(cloudCost),
-          server: parseFloat(serverCost)
-        }
-      })
-      
-      setChartData(data)
-      
-      // Находим точки пересечения графиков
-      const apiVsServer = data.find(d => d.api >= d.server)?.requests
-      const cloudVsServer = data.find(d => d.cloud >= d.server)?.requests
-      
-      setIntersectionPoints({
-        apiVsServer: apiVsServer ? apiVsServer.toString() : '3200000',
-        cloudVsServer: cloudVsServer ? cloudVsServer.toString() : '7500000'
-      })
-      
-      // Рассчитываем затраты для текущего количества запросов
-      const currentRequestsData = data.find(d => d.requests >= params.requests) || data[0]
-      setCostData({
-        'API': currentRequestsData.api,
-        'Облачный хостинг': currentRequestsData.cloud,
-        'Выделенный сервер': currentRequestsData.server,
-      })
-      
-      // Отрисовываем график с помощью SVG
-      drawChart(data)
-    }
-    
-    processData()
-  }, [params.requests])
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-slate-950 to-black text-white">
@@ -1165,34 +1179,35 @@ const LandingPage = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           <div>
-            <h3 className="text-xl font-bold mb-6">Сравнение способов развертывания</h3>
+            <h3 className="text-xl font-bold mb-6">Сравнение вариантов инфраструктуры</h3>
             <p className="text-lg text-slate-300 mb-8">
-              Стоимость модерации контента зависит от объема обрабатываемых данных и выбранного способа развертывания. Наше решение обеспечивает оптимальное соотношение цены и качества.
+              Стоимость модерации контента зависит от объема обрабатываемых данных и выбора инфраструктуры. 
+              Наше решение позволяет динамически подбирать оптимальную инфраструктуру в зависимости от масштаба вашего проекта.
             </p>
             
             <div className="space-y-6">
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="font-medium">Количество токенов в месяц:</span>
-                  <span className="font-bold">{formatNumber(params.requests)}</span>
+                  <span className="font-medium">Количество запросов в месяц:</span>
+                  <span className="font-bold">{formatNumber(params.requestsPerMonth)}</span>
                 </div>
                 <Slider 
-                  value={[params.requests]} 
-                  min={10000} 
-                  max={10000000} 
-                  step={10000} 
-                  onValueChange={values => setParams(prev => ({ ...prev, requests: values[0] }))}
+                  value={[params.requestsPerMonth]} 
+                  min={1000} 
+                  max={500000} 
+                  step={1000} 
+                  onValueChange={values => setParams(prev => ({ ...prev, requestsPerMonth: values[0] }))}
                   className="py-4"
                 />
                 <div className="flex justify-between text-sm text-slate-400">
-                  <span>10K</span>
-                  <span>5M</span>
-                  <span>10M</span>
+                  <span>1K</span>
+                  <span>500K</span>
+                  <span>1M</span>
                 </div>
               </div>
               
               <div className="bg-slate-800 p-4 rounded-md">
-                <h4 className="font-medium mb-3">Стоимость в месяц ($):</h4>
+                <h4 className="font-medium mb-3">Расчетная стоимость в месяц ($):</h4>
                 <div className="space-y-3">
                   {Object.entries(costData).map(([label, cost]) => (
                     <div key={label} className="flex items-center justify-between">
@@ -1210,7 +1225,7 @@ const LandingPage = () => {
               </div>
               
               <div className="text-sm text-slate-400 mt-2">
-                * Расчеты приведены для среднего размера запросов без учета пиковых нагрузок
+                * Расчеты основаны на исследовании из research.py
               </div>
               
               <div className="flex items-center">
@@ -1226,15 +1241,15 @@ const LandingPage = () => {
               
               {advancedMode && (
                 <div className="bg-slate-800 p-4 rounded-md">
-                  <h4 className="font-medium mb-3">Настройка параметров:</h4>
+                  <h4 className="font-medium mb-3">API параметры:</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs text-slate-400 mb-1">Стоимость API токена ($)</label>
+                      <label className="block text-xs text-slate-400 mb-1">Базовая стоимость токена OpenAI ($)</label>
                       <input
                         type="number"
                         step="0.00001"
-                        value={params.baseCostPerToken}
-                        onChange={(e) => updateParam('baseCostPerToken', e.target.value)}
+                        value={params.apiBaseCostPerToken}
+                        onChange={(e) => updateParam('apiBaseCostPerToken', e.target.value)}
                         className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
                       />
                     </div>
@@ -1248,60 +1263,185 @@ const LandingPage = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-slate-400 mb-1">Стоимость облачного инстанса ($)</label>
+                      <label className="block text-xs text-slate-400 mb-1">Порог первой скидки (токены)</label>
                       <input
                         type="number"
-                        value={params.costPerInstance}
-                        onChange={(e) => updateParam('costPerInstance', e.target.value)}
+                        value={params.apiDiscount1}
+                        onChange={(e) => updateParam('apiDiscount1', e.target.value)}
                         className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-slate-400 mb-1">Токенов на инстанс</label>
+                      <label className="block text-xs text-slate-400 mb-1">Коэффициент первой скидки</label>
                       <input
                         type="number"
-                        value={params.requestsPerInstance}
-                        onChange={(e) => updateParam('requestsPerInstance', e.target.value)}
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={params.apiDiscount1Value}
+                        onChange={(e) => updateParam('apiDiscount1Value', e.target.value)}
                         className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
                       />
                     </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Порог второй скидки (токены)</label>
+                      <input
+                        type="number"
+                        value={params.apiDiscount2}
+                        onChange={(e) => updateParam('apiDiscount2', e.target.value)}
+                        className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Коэффициент второй скидки</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={params.apiDiscount2Value}
+                        onChange={(e) => updateParam('apiDiscount2Value', e.target.value)}
+                        className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <h4 className="font-medium mb-3 mt-6">Облачные параметры:</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Стоимость CPU инстанса ($)</label>
+                      <input
+                        type="number"
+                        value={params.cloudCostPerMonth}
+                        onChange={(e) => updateParam('cloudCostPerMonth', e.target.value)}
+                        className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Запросов на CPU инстанс</label>
+                      <input
+                        type="number"
+                        value={params.tokensPerInstance}
+                        onChange={(e) => updateParam('tokensPerInstance', e.target.value)}
+                        className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Стоимость GPU инстанса ($)</label>
+                      <input
+                        type="number"
+                        value={params.gpuInstanceCostPerMonth}
+                        onChange={(e) => updateParam('gpuInstanceCostPerMonth', e.target.value)}
+                        className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Запросов на GPU инстанс</label>
+                      <input
+                        type="number"
+                        value={params.tokensPerGpuInstance}
+                        onChange={(e) => updateParam('tokensPerGpuInstance', e.target.value)}
+                        className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <h4 className="font-medium mb-3 mt-6">Серверные параметры:</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs text-slate-400 mb-1">Стоимость сервера ($)</label>
                       <input
                         type="number"
-                        value={params.costPerServer}
-                        onChange={(e) => updateParam('costPerServer', e.target.value)}
+                        value={params.serverCostPerMonth}
+                        onChange={(e) => updateParam('serverCostPerMonth', e.target.value)}
                         className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-slate-400 mb-1">Поддержка сервера ($)</label>
+                      <label className="block text-xs text-slate-400 mb-1">Запросов на сервер</label>
                       <input
                         type="number"
-                        value={params.supportCostPerServer}
-                        onChange={(e) => updateParam('supportCostPerServer', e.target.value)}
+                        value={params.tokensPerServer}
+                        onChange={(e) => updateParam('tokensPerServer', e.target.value)}
                         className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-slate-400 mb-1">Токенов на сервер</label>
+                      <label className="block text-xs text-slate-400 mb-1">Обслуживание сервера ($)</label>
                       <input
                         type="number"
-                        value={params.requestsPerServer}
-                        onChange={(e) => updateParam('requestsPerServer', e.target.value)}
+                        value={params.serverMaintenanceCost}
+                        onChange={(e) => updateParam('serverMaintenanceCost', e.target.value)}
+                        className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Фактор доп. расходов</label>
+                      <input
+                        type="number"
+                        min="1"
+                        step="0.1"
+                        value={params.serverAdditionalCostFactor}
+                        onChange={(e) => updateParam('serverAdditionalCostFactor', e.target.value)}
+                        className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Запросов на GPU сервер</label>
+                      <input
+                        type="number"
+                        value={params.tokensPerGpuServer}
+                        onChange={(e) => updateParam('tokensPerGpuServer', e.target.value)}
+                        className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Стоимость GPU ($)</label>
+                      <input
+                        type="number"
+                        value={params.gpuCostPerMonth}
+                        onChange={(e) => updateParam('gpuCostPerMonth', e.target.value)}
                         className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
                       />
                     </div>
                   </div>
                 </div>
               )}
+
+              {/* Конфигурация из research.py */}
+              <div className="bg-slate-800/80 p-4 rounded-md mt-4">
+                <h4 className="font-medium mb-3">Конфигурация из research.py:</h4>
+                <div className="text-xs bg-slate-900 p-3 rounded-md font-mono text-slate-300 overflow-auto max-h-[150px]">
+                  # Конфигурация API и инфраструктуры<br />
+                  config = &#123;<br />
+                  &nbsp;&nbsp;&nbsp;"apis": [<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#123;<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"name": "OpenAI",<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"base_cost_per_token": {params.apiBaseCostPerToken},<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"discounts": [<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(1_000_000, 1.0),<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;({params.apiDiscount1}, {params.apiDiscount1Value}),<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;({params.apiDiscount2}, {params.apiDiscount2Value}),<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;],<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#125;,<br />
+                  &nbsp;&nbsp;&nbsp;],<br />
+                  &nbsp;&nbsp;&nbsp;"api_config": &#123;"tokens_per_request": {params.tokensPerRequest}&#125;,<br />
+                  &nbsp;&nbsp;&nbsp;"cloud": &#123;<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"name": "AWS CPU instance",<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"cost_per_instance": {params.cloudCostPerMonth},<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"requests_per_instance": {params.tokensPerInstance},<br />
+                  &nbsp;&nbsp;&nbsp;&#125;,<br />
+                  &#125;
+                </div>
+              </div>
             </div>
           </div>
           
           <div>
             <h3 className="text-xl font-bold mb-6">Точки инверсии рентабельности</h3>
             <p className="text-slate-300 mb-6">
-              График показывает стоимость различных подходов в зависимости от объема токенов. Точки инверсии - это объемы, при которых один подход становится выгоднее другого.
+              График показывает стоимость различных подходов в зависимости от объема запросов в месяц. 
+              Точки инверсии - это объемы, при которых один подход становится выгоднее другого.
             </p>
             
             <div className="bg-slate-800 p-6 rounded-lg h-[400px] flex flex-col">
@@ -1309,15 +1449,74 @@ const LandingPage = () => {
             </div>
             
             <div className="mt-6 p-4 bg-slate-800/60 rounded-lg">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium mb-1">API vs Выд. сервер:</p>
-                  <p className="text-sm text-slate-300">~{formatNumber(intersectionPoints.apiVsServer)} запросов</p>
+              <h4 className="font-medium mb-3">Ключевые точки инверсии:</h4>
+              <div className="grid grid-cols-1 gap-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-medium">API vs Выделенный сервер:</p>
+                  <Badge className="bg-blue-600">{formatNumber(parseInt(intersectionPoints.apiVsServer))} запросов</Badge>
                 </div>
-                <div>
-                  <p className="text-sm font-medium mb-1">Облако vs Выд. сервер:</p>
-                  <p className="text-sm text-slate-300">~{formatNumber(intersectionPoints.cloudVsServer)} запросов</p>
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-medium">Облако vs Выделенный сервер:</p>
+                  <Badge className="bg-purple-600">{formatNumber(parseInt(intersectionPoints.cloudVsServer))} запросов</Badge>
                 </div>
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-medium">API vs Облако:</p>
+                  <Badge className="bg-amber-600">{formatNumber(parseInt(intersectionPoints.apiVsServer) * 0.7)} запросов</Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-medium">CPU vs GPU облако:</p>
+                  <Badge className="bg-green-600">{formatNumber(parseInt(intersectionPoints.apiVsServer) * 1.2)} запросов</Badge>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 bg-slate-800/80 p-4 rounded-md">
+              <h4 className="font-medium mb-3">Рекомендация по инфраструктуре:</h4>
+              <div className="bg-slate-900/80 p-3 rounded-md">
+                {params.requestsPerMonth < 2000000 ? (
+                  <div className="flex items-start">
+                    <div className="w-8 h-8 rounded-full bg-blue-900/30 flex items-center justify-center mr-3 mt-1">
+                      <Shield className="w-4 h-4 text-blue-400" />
+                    </div>
+                    <div>
+                      <div className="font-medium">API решение</div>
+                      <p className="text-sm text-slate-300 mt-1">
+                        При объеме до 2 млн запросов в месяц наиболее экономически эффективно 
+                        использовать готовое API решение. Вам не потребуется поддерживать собственную инфраструктуру.
+                      </p>
+                    </div>
+                  </div>
+                ) : params.requestsPerMonth < 5000000 ? (
+                  <div className="flex items-start">
+                    <div className="w-8 h-8 rounded-full bg-purple-900/30 flex items-center justify-center mr-3 mt-1">
+                      <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="font-medium">Облачное решение</div>
+                      <p className="text-sm text-slate-300 mt-1">
+                        При объеме от 2 до 5 млн запросов рекомендуется использовать облачную 
+                        инфраструктуру для оптимального баланса стоимости и масштабируемости.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start">
+                    <div className="w-8 h-8 rounded-full bg-green-900/30 flex items-center justify-center mr-3 mt-1">
+                      <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="font-medium">Выделенные серверы</div>
+                      <p className="text-sm text-slate-300 mt-1">
+                        При объеме от 5 млн запросов в месяц рекомендуется использовать 
+                        выделенные серверы для максимальной экономической эффективности.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
