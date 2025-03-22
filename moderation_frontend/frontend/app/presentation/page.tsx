@@ -1112,6 +1112,25 @@ const LandingPage = () => {
                       fill="#ef4444"
                     />
                   )}
+                  
+                  {/* Путь к MongoDB для режима отклонения */}
+                  {currentStep >= 2 && (
+                    <>
+                      <path 
+                        d="M 450 60 L 250 250" 
+                        stroke="#ef4444" 
+                        strokeWidth="3"
+                        fill="none" 
+                      />
+                      
+                      <circle 
+                        cx={currentStep === 2 ? "350" : "250"} 
+                        cy={currentStep === 2 ? "155" : "250"} 
+                        r="6" 
+                        fill="#ef4444"
+                      />
+                    </>
+                  )}
                 </>
               )}
               
@@ -1153,7 +1172,26 @@ const LandingPage = () => {
                     />
                   )}
                   
-                  {/* Финальный путь к MongoDB */}
+                  {/* Добавляем путь к MongoDB при режиме проверки на более раннем шаге */}
+                  {currentStep >= 2 && (
+                    <>
+                      <path 
+                        d="M 450 60 L 250 250" 
+                        stroke="#f59e0b" 
+                        strokeWidth="3"
+                        fill="none" 
+                      />
+                      
+                      <circle 
+                        cx={currentStep === 2 ? "350" : "250"} 
+                        cy={currentStep === 2 ? "155" : "250"} 
+                        r="6" 
+                        fill="#f59e0b"
+                      />
+                    </>
+                  )}
+                  
+                  {/* Финальный путь к MongoDB остаётся для совместимости */}
                   {currentStep >= 4 && (
                     <>
                       <path 
