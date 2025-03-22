@@ -291,61 +291,93 @@ const LandingPage = () => {
       // Создаем массив точек с разными объемами запросов для построения графика
       const data = []
       const max = 3000000 // Максимальное количество запросов для отображения
-      const step = 10000  // Шаг между точками
       
+      // Уменьшаем шаг для более точных вычислений точек пересечения
+      // Используем адаптивный шаг: меньше в начале, больше в конце
+      let step = 1000;
       for (let requests = 0; requests <= max; requests += step) {
         const costs = calculateCostForRequests(requests)
         data.push({
           requests,
           ...costs
         })
+        
+        // Увеличиваем шаг по мере роста числа запросов для оптимизации
+        if (requests >= 100000) step = 5000;
+        if (requests >= 500000) step = 10000;
+        if (requests >= 1000000) step = 20000;
       }
       
       setChartData(data)
       
       // Функция для нахождения точки пересечения двух линий
       const findIntersection = (line1: Array<{ requests: number, value: number }>, line2: Array<{ requests: number, value: number }>): number | null => {
-        // Проходим по всем точкам и ищем, где линии пересекаются
-        for (let i = 0; i < line1.length - 1; i++) {
-          const a1 = line1[i];
-          const a2 = line1[i + 1];
-          const aValue1 = a1.value;
-          const aValue2 = a2.value;
+        // Проходим по всем сегментам и ищем, где линии пересекаются
+        for (let i = 0; i < Math.min(line1.length, line2.length) - 1; i++) {
+          // Координаты текущего сегмента линии 1
+          const x1 = line1[i].requests;
+          const y1 = line1[i].value;
+          const x2 = line1[i + 1].requests;
+          const y2 = line1[i + 1].value;
           
-          const b1 = line2[i];
-          const b2 = line2[i + 1];
-          const bValue1 = b1.value;
-          const bValue2 = b2.value;
+          // Координаты текущего сегмента линии 2
+          const x3 = line2[i].requests;
+          const y3 = line2[i].value;
+          const x4 = line2[i + 1].requests;
+          const y4 = line2[i + 1].value;
           
-          // Проверяем, пересекаются ли линии на этом сегменте
-          // Если значения a и b поменяли своё соотношение, значит линии пересеклись
-          if ((aValue1 <= bValue1 && aValue2 >= bValue2) || 
-              (aValue1 >= bValue1 && aValue2 <= bValue2)) {
+          // Если линии практически параллельны, проверяем равенство значений
+          if (Math.abs(y1 - y3) < 0.01 && Math.abs(y2 - y4) < 0.01) {
+            return x1;
+          }
+          
+          // Функция для проверки пересечения отрезков
+          const ccw = (x1: number, y1: number, x2: number, y2: number, x3: number, y3: number) => {
+            return (y3 - y1) * (x2 - x1) > (y2 - y1) * (x3 - x1);
+          };
+          
+          const intersect = (x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, x4: number, y4: number) => {
+            return ccw(x1, y1, x3, y3, x4, y4) !== ccw(x2, y2, x3, y3, x4, y4) && 
+                   ccw(x1, y1, x2, y2, x3, y3) !== ccw(x1, y1, x2, y2, x4, y4);
+          };
+          
+          if (intersect(x1, y1, x2, y2, x3, y3, x4, y4)) {
+            // Вычисляем точку пересечения с помощью параметрического уравнения линии
+            const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / 
+                      ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
+                      
+            const intersectionX = x1 + t * (x2 - x1);
             
-            // Линейная интерполяция для нахождения точки пересечения
-            // Находим, на каком расстоянии от начала сегмента произошло пересечение
-            const aDiff = aValue2 - aValue1;
-            const bDiff = bValue2 - bValue1;
-            const aDiffAbs = Math.abs(aDiff);
-            const bDiffAbs = Math.abs(bDiff);
+            // Проверяем, что точка пересечения находится внутри сегмента
+            if (intersectionX >= x1 && intersectionX <= x2) {
+              return intersectionX;
+            }
+          }
+          
+          // Проверяем, не пересекаются ли линии между точками (когда значения меняются относительно друг друга)
+          if ((y1 < y3 && y2 > y4) || (y1 > y3 && y2 < y4)) {
+            // Находим точку, где значения равны
+            const slope1 = (y2 - y1) / (x2 - x1);
+            const slope2 = (y4 - y3) / (x4 - x3);
             
-            // Если линии параллельны, берем середину сегмента
-            if (aDiffAbs < 0.001 && bDiffAbs < 0.001) {
-              return a1.requests + (a2.requests - a1.requests) / 2;
+            if (Math.abs(slope1 - slope2) < 0.0001) {
+              // Практически параллельные линии
+              return (x1 + x2) / 2;
             }
             
-            // Высчитываем долю от начала сегмента, на которой произошло пересечение
-            const ratio = (bValue1 - aValue1) / (aDiff - bDiff);
+            // Вычисляем точку пересечения
+            const b1 = y1 - slope1 * x1;
+            const b2 = y3 - slope2 * x3;
             
-            // Если ratio в пределах [0, 1], пересечение произошло внутри сегмента
-            if (ratio >= 0 && ratio <= 1) {
-              // Находим соответствующее значение запросов
-              return a1.requests + ratio * (a2.requests - a1.requests);
+            const intersectionX = (b2 - b1) / (slope1 - slope2);
+            
+            // Проверяем, что точка находится внутри обоих сегментов
+            if (intersectionX >= x1 && intersectionX <= x2 && intersectionX >= x3 && intersectionX <= x4) {
+              return intersectionX;
             }
           }
         }
         
-        // Если пересечение не найдено, возвращаем null
         return null;
       };
       
@@ -382,7 +414,6 @@ const LandingPage = () => {
         'API': currentRequestsData.api,
         'CPU облако': currentRequestsData.cloud,
         'GPU облако': currentRequestsData.gpuCloud,
-        'Выделенный сервер': currentRequestsData.server,
         'Лизинг': currentRequestsData.lease,
         'GPU сервер': currentRequestsData.gpuServer
       })
@@ -404,7 +435,7 @@ const LandingPage = () => {
     // Определяем размеры графика
     const width = container.clientWidth;
     const height = container.clientHeight - 30; // Оставляем место для легенды
-    const padding = { top: 20, right: 20, bottom: 30, left: 50 };
+    const padding = { top: 20, right: 20, bottom: 50, left: 70 }; // Увеличиваем padding для осей
     
     // Находим максимальные значения для масштабирования
     const maxRequests = Math.max(...data.map(d => d.requests));
@@ -452,6 +483,79 @@ const LandingPage = () => {
     axisY.setAttribute('stroke-width', '1');
     svg.appendChild(axisY);
     
+    // Добавляем метки осей
+    const xAxisLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    xAxisLabel.setAttribute('x', (width / 2).toString());
+    xAxisLabel.setAttribute('y', (height - 10).toString());
+    xAxisLabel.setAttribute('text-anchor', 'middle');
+    xAxisLabel.setAttribute('fill', '#FFFFFF');
+    xAxisLabel.setAttribute('font-size', '12');
+    xAxisLabel.textContent = 'Количество запросов в месяц';
+    svg.appendChild(xAxisLabel);
+    
+    const yAxisLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    yAxisLabel.setAttribute('transform', `rotate(-90, 15, ${height / 2})`);
+    yAxisLabel.setAttribute('x', '15');
+    yAxisLabel.setAttribute('y', (height / 2).toString());
+    yAxisLabel.setAttribute('text-anchor', 'middle');
+    yAxisLabel.setAttribute('fill', '#FFFFFF');
+    yAxisLabel.setAttribute('font-size', '12');
+    yAxisLabel.textContent = 'Стоимость ($)';
+    svg.appendChild(yAxisLabel);
+    
+    // Добавляем метки значений по осям
+    const xTicks = 5;
+    for (let i = 0; i <= xTicks; i++) {
+      const value = (maxRequests / xTicks) * i;
+      const x = scaleX(value);
+      
+      // Линия тика
+      const tickLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      tickLine.setAttribute('x1', x.toString());
+      tickLine.setAttribute('y1', (height - padding.bottom).toString());
+      tickLine.setAttribute('x2', x.toString());
+      tickLine.setAttribute('y2', (height - padding.bottom + 5).toString());
+      tickLine.setAttribute('stroke', '#8899AA');
+      tickLine.setAttribute('stroke-width', '1');
+      svg.appendChild(tickLine);
+      
+      // Текст значения
+      const tickText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tickText.setAttribute('x', x.toString());
+      tickText.setAttribute('y', (height - padding.bottom + 20).toString());
+      tickText.setAttribute('text-anchor', 'middle');
+      tickText.setAttribute('fill', '#FFFFFF');
+      tickText.setAttribute('font-size', '10');
+      tickText.textContent = formatNumber(Math.round(value));
+      svg.appendChild(tickText);
+    }
+    
+    const yTicks = 5;
+    for (let i = 0; i <= yTicks; i++) {
+      const value = (maxCost / yTicks) * i;
+      const y = scaleY(value);
+      
+      // Линия тика
+      const tickLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      tickLine.setAttribute('x1', padding.left.toString());
+      tickLine.setAttribute('y1', y.toString());
+      tickLine.setAttribute('x2', (padding.left - 5).toString());
+      tickLine.setAttribute('y2', y.toString());
+      tickLine.setAttribute('stroke', '#8899AA');
+      tickLine.setAttribute('stroke-width', '1');
+      svg.appendChild(tickLine);
+      
+      // Текст значения
+      const tickText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tickText.setAttribute('x', (padding.left - 10).toString());
+      tickText.setAttribute('y', (y + 4).toString());
+      tickText.setAttribute('text-anchor', 'end');
+      tickText.setAttribute('fill', '#FFFFFF');
+      tickText.setAttribute('font-size', '10');
+      tickText.textContent = '$' + formatNumber(Math.round(value));
+      svg.appendChild(tickText);
+    }
+    
     // Рисуем линии для каждого типа данных
     const drawLine = (data: Array<{ requests: number, value: number }>, color: string) => {
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -484,45 +588,132 @@ const LandingPage = () => {
     drawLine(leaseData, '#F59E0B'); // amber-500
     drawLine(gpuServerData, '#EF4444'); // red-500
     
-    // Отмечаем точки инверсии
-    if (parseInt(intersectionPoints.apiVsServer) > 0) {
-      const apiVsServerPoint = data.find(d => d.requests >= parseInt(intersectionPoints.apiVsServer));
-      if (apiVsServerPoint) {
-        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        circle.setAttribute('cx', scaleX(apiVsServerPoint.requests).toString());
-        circle.setAttribute('cy', scaleY(apiVsServerPoint.api).toString());
-        circle.setAttribute('r', '4');
-        circle.setAttribute('fill', '#EF4444'); // red-500
-        circle.setAttribute('class', 'animate-pulse');
-        svg.appendChild(circle);
+    // Находим наиболее выгодное решение при текущем количестве запросов
+    const currentRequestsIndex = data.findIndex(d => d.requests >= params.requestsPerMonth);
+    const currentData = currentRequestsIndex >= 0 ? data[currentRequestsIndex] : data[0];
+
+    // Определяем самую низкую стоимость
+    const costs = [
+      { label: 'API', value: currentData.api, color: '#3B82F6' },
+      { label: 'Cloud', value: currentData.cloud, color: '#A855F7' },
+      { label: 'GPU Cloud', value: currentData.gpuCloud, color: '#6366F1' },
+      { label: 'Server', value: currentData.server, color: '#22C55E' },
+      { label: 'Lease', value: currentData.lease, color: '#F59E0B' },
+      { label: 'GPU Server', value: currentData.gpuServer, color: '#EF4444' },
+    ];
+
+    const cheapestOption = costs.reduce((prev, current) => 
+      prev.value < current.value ? prev : current
+    );
+
+    // Выделяем точку текущего запроса на графике
+    const currentPointCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    currentPointCircle.setAttribute('cx', scaleX(params.requestsPerMonth).toString());
+    currentPointCircle.setAttribute('cy', scaleY(cheapestOption.value).toString());
+    currentPointCircle.setAttribute('r', '6');
+    currentPointCircle.setAttribute('fill', cheapestOption.color);
+    currentPointCircle.setAttribute('stroke', '#FFFFFF');
+    currentPointCircle.setAttribute('stroke-width', '2');
+    svg.appendChild(currentPointCircle);
+
+    // Отмечаем текущее значение
+    const currentLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    currentLabel.setAttribute('x', (scaleX(params.requestsPerMonth) + 10).toString());
+    currentLabel.setAttribute('y', (scaleY(cheapestOption.value) - 10).toString());
+    currentLabel.setAttribute('fill', '#FFFFFF');
+    currentLabel.setAttribute('font-size', '12');
+    currentLabel.setAttribute('font-weight', 'bold');
+    currentLabel.textContent = `${cheapestOption.label}: $${formatNumber(cheapestOption.value)}`;
+    svg.appendChild(currentLabel);
+
+    // Рисуем вертикальную линию от текущей точки к оси X
+    const currentLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    currentLine.setAttribute('x1', scaleX(params.requestsPerMonth).toString());
+    currentLine.setAttribute('y1', scaleY(cheapestOption.value).toString());
+    currentLine.setAttribute('x2', scaleX(params.requestsPerMonth).toString());
+    currentLine.setAttribute('y2', (height - padding.bottom).toString());
+    currentLine.setAttribute('stroke', '#FFFFFF');
+    currentLine.setAttribute('stroke-width', '1');
+    currentLine.setAttribute('stroke-dasharray', '3,2');
+    svg.appendChild(currentLine);
+
+    // Отображаем все точки инверсии на графике
+    const intersectionPointsArray = [
+      { name: 'API vs Server', value: intersectionPoints.apiVsServer === 'не найдено' ? NaN : parseInt(intersectionPoints.apiVsServer), color1: '#3B82F6', color2: '#22C55E' },
+      { name: 'Cloud vs Server', value: intersectionPoints.cloudVsServer === 'не найдено' ? NaN : parseInt(intersectionPoints.cloudVsServer), color1: '#A855F7', color2: '#22C55E' },
+      { name: 'API vs Cloud', value: intersectionPoints.apiVsCloud === 'не найдено' ? NaN : parseInt(intersectionPoints.apiVsCloud), color1: '#3B82F6', color2: '#A855F7' },
+      { name: 'CPU vs GPU Cloud', value: intersectionPoints.cpuVsGpuCloud === 'не найдено' ? NaN : parseInt(intersectionPoints.cpuVsGpuCloud), color1: '#A855F7', color2: '#6366F1' },
+      { name: 'API vs Lease', value: intersectionPoints.apiVsLease === 'не найдено' ? NaN : parseInt(intersectionPoints.apiVsLease), color1: '#3B82F6', color2: '#F59E0B' },
+      { name: 'Cloud vs Lease', value: intersectionPoints.cloudVsLease === 'не найдено' ? NaN : parseInt(intersectionPoints.cloudVsLease), color1: '#A855F7', color2: '#F59E0B' },
+      { name: 'Lease vs Server', value: intersectionPoints.leaseVsServer === 'не найдено' ? NaN : parseInt(intersectionPoints.leaseVsServer), color1: '#F59E0B', color2: '#22C55E' },
+    ];
+
+    // Фильтруем только валидные точки пересечения и находим значения для них
+    intersectionPointsArray.forEach(point => {
+      if (!isNaN(point.value) && point.value > 0) {
+        // Находим ближайшую точку данных для определения высоты
+        const closestPoint = data.reduce((prev, curr) => 
+          Math.abs(curr.requests - point.value) < Math.abs(prev.requests - point.value) ? curr : prev
+        );
         
-        // Добавляем вертикальную линию к оси X
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', scaleX(apiVsServerPoint.requests).toString());
-        line.setAttribute('y1', scaleY(apiVsServerPoint.api).toString());
-        line.setAttribute('x2', scaleX(apiVsServerPoint.requests).toString());
-        line.setAttribute('y2', (height - padding.bottom).toString());
-        line.setAttribute('stroke', '#EF4444');
-        line.setAttribute('stroke-width', '1');
-        line.setAttribute('stroke-dasharray', '4,2');
-        svg.appendChild(line);
+        // Определяем, какие линии пересекаются, чтобы получить правильное значение y
+        let yValue;
+        if (point.name === 'API vs Server') {
+          yValue = (closestPoint.api + closestPoint.server) / 2;
+        } else if (point.name === 'Cloud vs Server') {
+          yValue = (closestPoint.cloud + closestPoint.server) / 2;
+        } else if (point.name === 'API vs Cloud') {
+          yValue = (closestPoint.api + closestPoint.cloud) / 2;
+        } else if (point.name === 'CPU vs GPU Cloud') {
+          yValue = (closestPoint.cloud + closestPoint.gpuCloud) / 2;
+        } else if (point.name === 'API vs Lease') {
+          yValue = (closestPoint.api + closestPoint.lease) / 2;
+        } else if (point.name === 'Cloud vs Lease') {
+          yValue = (closestPoint.cloud + closestPoint.lease) / 2;
+        } else if (point.name === 'Lease vs Server') {
+          yValue = (closestPoint.lease + closestPoint.server) / 2;
+        }
         
-        // Добавляем текст с количеством запросов
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', scaleX(apiVsServerPoint.requests).toString());
-        text.setAttribute('y', (height - padding.bottom + 15).toString());
-        text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('fill', '#FFFFFF');
-        text.setAttribute('font-size', '10');
-        text.textContent = formatNumber(intersectionPoints.apiVsServer);
-        svg.appendChild(text);
+        // Рисуем точку инверсии
+        const intersectionCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        intersectionCircle.setAttribute('cx', scaleX(point.value || 0).toString());
+        intersectionCircle.setAttribute('cy', scaleY(yValue || 0).toString());
+        intersectionCircle.setAttribute('r', '4');
+        intersectionCircle.setAttribute('fill', '#FFFFFF');
+        intersectionCircle.setAttribute('stroke', '#FF5722');
+        intersectionCircle.setAttribute('stroke-width', '2');
+        svg.appendChild(intersectionCircle);
+        
+        // Добавляем вертикальную пунктирную линию
+        const intersectionLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        intersectionLine.setAttribute('x1', scaleX(point.value || 0).toString());
+        intersectionLine.setAttribute('y1', scaleY(yValue || 0).toString());
+        intersectionLine.setAttribute('x2', scaleX(point.value || 0).toString());
+        intersectionLine.setAttribute('y2', (height - padding.bottom).toString());
+        intersectionLine.setAttribute('stroke', '#FF5722');
+        intersectionLine.setAttribute('stroke-width', '1');
+        intersectionLine.setAttribute('stroke-dasharray', '2,2');
+        svg.appendChild(intersectionLine);
+        
+        // Добавляем подпись к точке, если она в пределах видимой области
+        if (point.value && !isNaN(point.value) && point.value <= maxRequests && 
+            scaleX(point.value) >= padding.left && scaleX(point.value) <= width - padding.right) {
+          const annotationText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          annotationText.setAttribute('x', scaleX(point.value).toString());
+          annotationText.setAttribute('y', (scaleY(yValue || 0) - 10).toString());
+          annotationText.setAttribute('text-anchor', 'middle');
+          annotationText.setAttribute('fill', '#FFFFFF');
+          annotationText.setAttribute('font-size', '9');
+          annotationText.textContent = `${formatNumber(point.value)}`;
+          svg.appendChild(annotationText);
+        }
       }
-    }
-    
+    });
+
     // Добавляем легенду
     const legendY = height - 10;
-    const legendSpacing = 80;
-    
+    const legendSpacing = width / 7; // Более равномерное распределение для избежания наложения
+
     const legendItems = [
       { label: 'API', color: '#3B82F6' },
       { label: 'CPU облако', color: '#A855F7' },
@@ -531,7 +722,7 @@ const LandingPage = () => {
       { label: 'Лизинг', color: '#F59E0B' },
       { label: 'GPU сервер', color: '#EF4444' }
     ];
-    
+
     legendItems.forEach((item, index) => {
       const x = padding.left + index * legendSpacing;
       
@@ -539,7 +730,7 @@ const LandingPage = () => {
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       line.setAttribute('x1', x.toString());
       line.setAttribute('y1', legendY.toString());
-      line.setAttribute('x2', (x + 20).toString());
+      line.setAttribute('x2', (x + 15).toString());
       line.setAttribute('y2', legendY.toString());
       line.setAttribute('stroke', item.color);
       line.setAttribute('stroke-width', '2');
@@ -547,7 +738,7 @@ const LandingPage = () => {
       
       // Текст легенды
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      text.setAttribute('x', (x + 25).toString());
+      text.setAttribute('x', (x + 20).toString());
       text.setAttribute('y', (legendY + 4).toString());
       text.setAttribute('fill', '#FFFFFF');
       text.setAttribute('font-size', '10');
@@ -1245,7 +1436,7 @@ const LandingPage = () => {
                 <Slider 
                   value={[params.requestsPerMonth]} 
                   min={1000} 
-                  max={500000} 
+                  max={1000000} 
                   step={1000} 
                   onValueChange={values => setParams(prev => ({ ...prev, requestsPerMonth: values[0] }))}
                   className="py-4"
