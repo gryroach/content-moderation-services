@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CreateReviewForm, RenderModerationComment, ReviewColumns, StatusBadge } from "./components";
@@ -128,8 +129,8 @@ export default function DemoPage() {
       if (result) {
         // Закрываем диалог модерации отзыва
         setReviewToModerate(null);
-        // Обновляем список отзывов
-        fetchReviews(false);
+        // Не делаем дополнительный запрос, так как состояние уже обновлено локально
+        // и фоновое автообновление сработает по расписанию
       } else {
         console.error('Не удалось промодерировать комментарий');
         alert('Ошибка при обработке комментария. Пожалуйста, попробуйте еще раз.');
@@ -155,16 +156,17 @@ export default function DemoPage() {
               size="sm" 
               onClick={() => fetchReviews(true)}
               disabled={loadingReviews}
+              className="w-[130px] relative"
             >
-              {loadingReviews ? (
-                <>Загрузка...</>
-              ) : isRefreshing ? (
-                <>Обновление...</>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2" /> Обновить
-                </>
-              )}
+              <div className="flex items-center justify-center">
+                <RefreshCw className={cn(
+                  "h-4 w-4 mr-2 transition-transform",
+                  (loadingReviews || isRefreshing) && "animate-spin"
+                )} />
+                <span>
+                  "Обновить"
+                </span>
+              </div>
             </Button>
           </div>
         </div>
