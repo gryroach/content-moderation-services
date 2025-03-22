@@ -43,36 +43,27 @@ const LandingPage = () => {
   // Параметры расчетов
   const [params, setParams] = useState({
     requestsPerMonth: 50000,        // Количество запросов в месяц
-    tokensPerRequest: 1000,           // Количество токенов на запрос
-    apiCostPerToken: 0.000015,          // Стоимость API за токен (используется для OpenAI)
-    cloudCostPerMonth: 15000,         // Стоимость облака в месяц
-    tokensPerInstance: 2500000,       // Токенов на инстанс
-    serverCostPerMonth: 30000,        // Стоимость сервера в месяц
-    serverMaintenanceCost: 5000,      // Поддержка сервера
-    tokensPerServer: 5000000,         // Токенов на сервер
-    gpuCostPerMonth: 20000,           // Стоимость GPU в месяц
-    serverLeaseCostPerMonth: 15000,   // Стоимость лизинга сервера в месяц
-    serverLeaseMaintenanceCost: 2500, // Поддержка при лизинге
-    serverAdditionalCostFactor: 1.2,  // Дополнительные расходы для сервера (фактор)
+    tokensPerRequest: 5,           // Количество токенов на запрос (из research.py)
+    apiCostPerToken: 0.0015,          // Стоимость API за токен (используется для OpenAI, из research.py)
+    cloudCostPerMonth: 410,         // Стоимость облака в месяц (из research.py)
+    requestsPerCloudInstance: 400_000,  // Запросов на один облачный инстанс (рассчитано из research.py)
+    serverCostPerMonth: 288,        // Стоимость сервера в месяц (из research.py)
+    serverMaintenanceCost: 150,      // Поддержка сервера (из research.py)
+    requestsPerCpuServer: 1_000_000,    // Запросов на один CPU сервер (рассчитано из research.py)
+    requestsPerCpuServerLease: 5_000_000,
+    gpuCostPerMonth: 2000,           // Стоимость GPU в месяц (из research.py)
+    serverLeaseCostPerMonth: 500,   // Стоимость лизинга сервера в месяц
+    serverLeaseMaintenanceCost: 500, // Поддержка при лизинге
+    serverAdditionalCostFactor: 1.2,  // Дополнительные расходы для сервера (фактор) (из research.py)
     leaseAdditionalCostFactor: 1.1,   // Дополнительные расходы для лизинга (фактор)
-    gpuInstanceCostPerMonth: 40000,   // Стоимость GPU инстанса в облаке
-    tokensPerGpuInstance: 7000000,    // Токенов на GPU инстанс
-    tokensPerGpuServer: 10000000,     // Токенов на GPU сервер
-    apiDiscount1: 5000000,            // Порог для первой скидки API
+    gpuInstanceCostPerMonth: 1200,   // Стоимость GPU инстанса в облаке (из research.py)
+    requestsPerGpuInstance: 1_400_000,  // Запросов на один GPU инстанс (рассчитано из research.py)
+    requestsPerGpuServer: 2_000_000,   // Запросов на один GPU сервер (рассчитано из research.py)
+    apiDiscount1: 250_000,           // Порог для первой скидки API (запросы)
     apiDiscount1Value: 0.9,           // Значение первой скидки (10%)
-    apiDiscount2: 10000000,           // Порог для второй скидки API
+    apiDiscount2: 500_000,           // Порог для второй скидки API (запросы)
     apiDiscount2Value: 0.8,           // Значение второй скидки (20%)
-    apiCustomDiscount1: 5000000,        // Порог для первой скидки Custom API
-    apiCustomDiscount1Value: 0.92,      // Значение первой скидки (8%)
-    apiCustomDiscount2: 10000000,       // Порог для второй скидки Custom API
-    apiCustomDiscount2Value: 0.85,      // Значение второй скидки (15%)
-    apiCustom2Discount1: 5000000,       // Порог для первой скидки Custom API 2
-    apiCustom2Discount1Value: 0.95,     // Значение первой скидки (5%)
-    apiCustom2Discount2: 10000000,      // Порог для второй скидки Custom API 2
-    apiCustom2Discount2Value: 0.9,      // Значение второй скидки (10%)
-    apiBaseCostPerToken: 0.0001,        // Базовая стоимость OpenAI за токен
-    apiCustomBaseCostPerToken: 0.00015, // Базовая стоимость Custom API 1 за токен
-    apiCustom2BaseCostPerToken: 0.00005 // Базовая стоимость Custom API 2 за токен
+    apiBaseCostPerToken: 0.0001        // Базовая стоимость API за токен (для отображения)
   })
   
   const [activeTab, setActiveTab] = useState('scenario1')
@@ -94,17 +85,21 @@ const LandingPage = () => {
   const chartRef = useRef<HTMLDivElement>(null)
   const [chartData, setChartData] = useState<Array<{ requests: number, api: number, cloud: number, gpuCloud: number, server: number, lease: number, gpuServer: number }>>([])
   const [intersectionPoints, setIntersectionPoints] = useState<{
-    apiVsServer: string,
-    cloudVsServer: string,
-    apiVsLease: string,
-    cloudVsLease: string,
-    leaseVsServer: string
+    apiVsServer: string;
+    cloudVsServer: string;
+    apiVsCloud: string;
+    cpuVsGpuCloud: string;
+    apiVsLease: string;
+    cloudVsLease: string;
+    leaseVsServer: string;
   }>({
-    'apiVsServer': '3200000',
-    'cloudVsServer': '7500000',
-    'apiVsLease': '2500000',
-    'cloudVsLease': '5000000',
-    'leaseVsServer': '1800000'
+    apiVsServer: "0",
+    cloudVsServer: "0",
+    apiVsCloud: "0",
+    cpuVsGpuCloud: "0",
+    apiVsLease: "0",
+    cloudVsLease: "0",
+    leaseVsServer: "0"
   })
   
   // Восстанавливаем переменную для расширенного режима
@@ -191,55 +186,58 @@ const LandingPage = () => {
       tokensPerRequest, 
       apiCostPerToken, 
       cloudCostPerMonth,
-      tokensPerInstance,
+      requestsPerCloudInstance,
       serverCostPerMonth,
       serverMaintenanceCost,
-      tokensPerServer,
+      requestsPerCpuServer,
+      requestsPerCpuServerLease,
       gpuCostPerMonth,
       serverLeaseCostPerMonth,
       serverLeaseMaintenanceCost,
       serverAdditionalCostFactor,
       leaseAdditionalCostFactor,
       gpuInstanceCostPerMonth,
-      tokensPerGpuInstance,
-      tokensPerGpuServer,
+      requestsPerGpuInstance,
+      requestsPerGpuServer,
       apiDiscount1, 
       apiDiscount1Value, 
       apiDiscount2, 
       apiDiscount2Value
     } = params
     
-    const totalTokens = requestsPerMonth * tokensPerRequest;
+    // Упрощаем расчеты, используя запросы как основную единицу
+    const totalRequests = requestsPerMonth;
+    const totalTokens = totalRequests * tokensPerRequest;
     
-    // Дисконты на основе объема
+    // Дисконты на основе объема запросов
     let costPerToken = apiCostPerToken
-    if (totalTokens >= apiDiscount2) {
+    if (totalRequests >= apiDiscount2) {
       costPerToken *= apiDiscount2Value
-    } else if (totalTokens >= apiDiscount1) {
+    } else if (totalRequests >= apiDiscount1) {
       costPerToken *= apiDiscount1Value
     }
     
-    // Расчет стоимости API
+    // Расчет стоимости API (зависит от токенов)
     const apiCost = totalTokens * costPerToken;
     
     // Расчет стоимости облачного хостинга (CPU)
-    const cloudInstancesNeeded = Math.ceil(totalTokens / tokensPerInstance);
+    const cloudInstancesNeeded = Math.ceil(totalRequests / requestsPerCloudInstance);
     const cloudCost = cloudCostPerMonth * cloudInstancesNeeded;
     
     // Расчет стоимости облачного хостинга (GPU)
-    const gpuCloudInstancesNeeded = Math.ceil(totalTokens / tokensPerGpuInstance);
+    const gpuCloudInstancesNeeded = Math.ceil(totalRequests / requestsPerGpuInstance);
     const gpuCloudCost = gpuInstanceCostPerMonth * gpuCloudInstancesNeeded;
     
     // Расчет стоимости выделенного сервера
-    const serversNeeded = Math.ceil(totalTokens / tokensPerServer);
-    const serverCost = serversNeeded * (serverCostPerMonth + serverMaintenanceCost + gpuCostPerMonth) * serverAdditionalCostFactor;
+    const serversNeeded = Math.ceil(totalRequests / requestsPerCpuServer);
+    const serverCost = serversNeeded * (serverCostPerMonth + serverMaintenanceCost) * serverAdditionalCostFactor;
     
     // Расчет стоимости лизинга сервера
-    const leaseServersNeeded = Math.ceil(totalTokens / tokensPerServer);
+    const leaseServersNeeded = Math.ceil(totalRequests / requestsPerCpuServerLease);
     const leaseCost = leaseServersNeeded * (serverLeaseCostPerMonth + serverLeaseMaintenanceCost) * leaseAdditionalCostFactor;
     
     // Расчет стоимости выделенного GPU сервера
-    const gpuServersNeeded = Math.ceil(totalTokens / tokensPerGpuServer);
+    const gpuServersNeeded = Math.ceil(totalRequests / requestsPerGpuServer);
     const gpuServerCost = gpuServersNeeded * (serverCostPerMonth + serverMaintenanceCost + gpuCostPerMonth) * serverAdditionalCostFactor * 1.3; // Повышенный фактор для GPU сервера
     
     setCostData({
@@ -253,35 +251,36 @@ const LandingPage = () => {
     
     // Расчет функции стоимости для разных объемов
     const calculateCostForRequests = (requests: number) => {
+      // Упрощаем расчет стоимости, используя запросы как основную единицу
       const tokens = requests * tokensPerRequest;
       
       // API стоимость с учетом дисконтов
       let apiTokenCost = apiCostPerToken;
-      if (tokens >= apiDiscount2) {
+      if (requests >= apiDiscount2) {
         apiTokenCost *= apiDiscount2Value;
-      } else if (tokens >= apiDiscount1) {
+      } else if (requests >= apiDiscount1) {
         apiTokenCost *= apiDiscount1Value;
       }
       const api = tokens * apiTokenCost;
       
       // Облачный хостинг (CPU)
-      const cloudInstances = Math.ceil(tokens / tokensPerInstance);
+      const cloudInstances = Math.ceil(requests / requestsPerCloudInstance);
       const cloud = cloudInstances * cloudCostPerMonth;
       
       // Облачный хостинг (GPU)
-      const gpuCloudInstances = Math.ceil(tokens / tokensPerGpuInstance);
+      const gpuCloudInstances = Math.ceil(requests / requestsPerGpuInstance);
       const gpuCloud = gpuCloudInstances * gpuInstanceCostPerMonth;
       
       // Выделенный сервер
-      const servers = Math.ceil(tokens / tokensPerServer);
-      const server = servers * (serverCostPerMonth + serverMaintenanceCost + gpuCostPerMonth) * serverAdditionalCostFactor;
+      const servers = Math.ceil(requests / requestsPerCpuServer);
+      const server = servers * (serverCostPerMonth + serverMaintenanceCost) * serverAdditionalCostFactor;
       
       // Лизинг сервера
-      const leaseServers = Math.ceil(tokens / tokensPerServer);
+      const leaseServers = Math.ceil(requests / requestsPerCpuServerLease);
       const lease = leaseServers * (serverLeaseCostPerMonth + serverLeaseMaintenanceCost) * leaseAdditionalCostFactor;
       
       // GPU Сервер
-      const gpuServers = Math.ceil(tokens / tokensPerGpuServer);
+      const gpuServers = Math.ceil(requests / requestsPerGpuServer);
       const gpuServer = gpuServers * (serverCostPerMonth + serverMaintenanceCost + gpuCostPerMonth) * serverAdditionalCostFactor * 1.3;
       
       return { api, cloud, gpuCloud, server, lease, gpuServer };
@@ -289,51 +288,103 @@ const LandingPage = () => {
     
     // Генерация данных для графика
     const processData = () => {
-      // Генерация данных для графика
-      const maxRequests = params.requestsPerMonth * 5
-      const steps = 20
-      const requestsStep = maxRequests / steps
-
-      // Создаем массив точек для графика
-      const data = Array.from({ length: steps + 1 }, (_, i) => {
-        const req = Math.round(i * requestsStep)
-        // Рассчитываем стоимость для каждого API
-        const costs = calculateCostForRequests(req)
-        
-        return {
-          requests: req,
-          api: costs.api,
-          cloud: costs.cloud,
-          gpuCloud: costs.gpuCloud,
-          server: costs.server,
-          lease: costs.lease,
-          gpuServer: costs.gpuServer
-        }
-      })
+      // Создаем массив точек с разными объемами запросов для построения графика
+      const data = []
+      const max = 3000000 // Максимальное количество запросов для отображения
+      const step = 10000  // Шаг между точками
+      
+      for (let requests = 0; requests <= max; requests += step) {
+        const costs = calculateCostForRequests(requests)
+        data.push({
+          requests,
+          ...costs
+        })
+      }
       
       setChartData(data)
       
-      // Находим точки пересечения графиков
-      const apiVsServer = data.find(d => d.api >= d.server)?.requests
-      const cloudVsServer = data.find(d => d.cloud >= d.server)?.requests
-      const apiVsLease = data.find(d => d.api >= d.lease)?.requests
-      const cloudVsLease = data.find(d => d.cloud >= d.lease)?.requests
-      const leaseVsServer = data.find(d => d.lease >= d.server)?.requests
+      // Функция для нахождения точки пересечения двух линий
+      const findIntersection = (line1: Array<{ requests: number, value: number }>, line2: Array<{ requests: number, value: number }>): number | null => {
+        // Проходим по всем точкам и ищем, где линии пересекаются
+        for (let i = 0; i < line1.length - 1; i++) {
+          const a1 = line1[i];
+          const a2 = line1[i + 1];
+          const aValue1 = a1.value;
+          const aValue2 = a2.value;
+          
+          const b1 = line2[i];
+          const b2 = line2[i + 1];
+          const bValue1 = b1.value;
+          const bValue2 = b2.value;
+          
+          // Проверяем, пересекаются ли линии на этом сегменте
+          // Если значения a и b поменяли своё соотношение, значит линии пересеклись
+          if ((aValue1 <= bValue1 && aValue2 >= bValue2) || 
+              (aValue1 >= bValue1 && aValue2 <= bValue2)) {
+            
+            // Линейная интерполяция для нахождения точки пересечения
+            // Находим, на каком расстоянии от начала сегмента произошло пересечение
+            const aDiff = aValue2 - aValue1;
+            const bDiff = bValue2 - bValue1;
+            const aDiffAbs = Math.abs(aDiff);
+            const bDiffAbs = Math.abs(bDiff);
+            
+            // Если линии параллельны, берем середину сегмента
+            if (aDiffAbs < 0.001 && bDiffAbs < 0.001) {
+              return a1.requests + (a2.requests - a1.requests) / 2;
+            }
+            
+            // Высчитываем долю от начала сегмента, на которой произошло пересечение
+            const ratio = (bValue1 - aValue1) / (aDiff - bDiff);
+            
+            // Если ratio в пределах [0, 1], пересечение произошло внутри сегмента
+            if (ratio >= 0 && ratio <= 1) {
+              // Находим соответствующее значение запросов
+              return a1.requests + ratio * (a2.requests - a1.requests);
+            }
+          }
+        }
+        
+        // Если пересечение не найдено, возвращаем null
+        return null;
+      };
+      
+      // Преобразуем данные для использования в findIntersection
+      const apiLine = data.map(d => ({ requests: d.requests, value: d.api }));
+      const cloudLine = data.map(d => ({ requests: d.requests, value: d.cloud }));
+      const serverLine = data.map(d => ({ requests: d.requests, value: d.server }));
+      const leaseLine = data.map(d => ({ requests: d.requests, value: d.lease }));
+      const gpuCloudLine = data.map(d => ({ requests: d.requests, value: d.gpuCloud }));
+      const gpuServerLine = data.map(d => ({ requests: d.requests, value: d.gpuServer }));
+      
+      // Находим пересечения между разными линиями
+      const apiVsServer = findIntersection(apiLine, serverLine);
+      const cloudVsServer = findIntersection(cloudLine, serverLine);
+      const apiVsCloud = findIntersection(apiLine, cloudLine);
+      const apiVsLease = findIntersection(apiLine, leaseLine);
+      const cloudVsLease = findIntersection(cloudLine, leaseLine);
+      const leaseVsServer = findIntersection(leaseLine, serverLine);
+      const cpuVsGpuCloud = findIntersection(cloudLine, gpuCloudLine);
       
       setIntersectionPoints({
-        apiVsServer: apiVsServer ? apiVsServer.toString() : '3200000',
-        cloudVsServer: cloudVsServer ? cloudVsServer.toString() : '7500000',
-        apiVsLease: apiVsLease ? apiVsLease.toString() : '2500000',
-        cloudVsLease: cloudVsLease ? cloudVsLease.toString() : '5000000',
-        leaseVsServer: leaseVsServer ? leaseVsServer.toString() : '1800000'
+        apiVsServer: apiVsServer ? Math.round(apiVsServer).toString() : 'не найдено',
+        cloudVsServer: cloudVsServer ? Math.round(cloudVsServer).toString() : 'не найдено',
+        apiVsCloud: apiVsCloud ? Math.round(apiVsCloud).toString() : 'не найдено',
+        apiVsLease: apiVsLease ? Math.round(apiVsLease).toString() : 'не найдено',
+        cloudVsLease: cloudVsLease ? Math.round(cloudVsLease).toString() : 'не найдено',
+        leaseVsServer: leaseVsServer ? Math.round(leaseVsServer).toString() : 'не найдено',
+        cpuVsGpuCloud: cpuVsGpuCloud ? Math.round(cpuVsGpuCloud).toString() : 'не найдено'
       })
       
       // Рассчитываем затраты для текущего количества запросов
       const currentRequestsData = data.find(d => d.requests >= params.requestsPerMonth) || data[0]
       setCostData({
         'API': currentRequestsData.api,
-        'Облачный хостинг': currentRequestsData.cloud,
+        'CPU облако': currentRequestsData.cloud,
+        'GPU облако': currentRequestsData.gpuCloud,
         'Выделенный сервер': currentRequestsData.server,
+        'Лизинг': currentRequestsData.lease,
+        'GPU сервер': currentRequestsData.gpuServer
       })
       
       // Отрисовываем график с помощью SVG
@@ -1209,16 +1260,10 @@ const LandingPage = () => {
               <div className="bg-slate-800 p-4 rounded-md">
                 <h4 className="font-medium mb-3">Расчетная стоимость в месяц ($):</h4>
                 <div className="space-y-3">
-                  {Object.entries(costData).map(([label, cost]) => (
-                    <div key={label} className="flex items-center justify-between">
-                      <span>{label}</span>
-                      <span className={`font-bold ${
-                        cost === Math.min(...Object.values(costData)) 
-                          ? 'text-green-400' 
-                          : 'text-slate-300'
-                      }`}>
-                        ${cost}
-                      </span>
+                  {Object.entries(costData).map(([name, value]) => (
+                    <div key={name} className="flex justify-between items-center">
+                      <div className="text-sm font-medium">{name}:</div>
+                      <div className="text-sm font-bold">${formatNumber(value)}</div>
                     </div>
                   ))}
                 </div>
@@ -1321,8 +1366,8 @@ const LandingPage = () => {
                       <label className="block text-xs text-slate-400 mb-1">Запросов на CPU инстанс</label>
                       <input
                         type="number"
-                        value={params.tokensPerInstance}
-                        onChange={(e) => updateParam('tokensPerInstance', e.target.value)}
+                        value={params.requestsPerCloudInstance}
+                        onChange={(e) => updateParam('requestsPerCloudInstance', e.target.value)}
                         className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
                       />
                     </div>
@@ -1339,8 +1384,8 @@ const LandingPage = () => {
                       <label className="block text-xs text-slate-400 mb-1">Запросов на GPU инстанс</label>
                       <input
                         type="number"
-                        value={params.tokensPerGpuInstance}
-                        onChange={(e) => updateParam('tokensPerGpuInstance', e.target.value)}
+                        value={params.requestsPerGpuInstance}
+                        onChange={(e) => updateParam('requestsPerGpuInstance', e.target.value)}
                         className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
                       />
                     </div>
@@ -1361,8 +1406,17 @@ const LandingPage = () => {
                       <label className="block text-xs text-slate-400 mb-1">Запросов на сервер</label>
                       <input
                         type="number"
-                        value={params.tokensPerServer}
-                        onChange={(e) => updateParam('tokensPerServer', e.target.value)}
+                        value={params.requestsPerCpuServer}
+                        onChange={(e) => updateParam('requestsPerCpuServer', e.target.value)}
+                        className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Запросов на сервер (лизинг)</label>
+                      <input
+                        type="number"
+                        value={params.requestsPerCpuServerLease}
+                        onChange={(e) => updateParam('requestsPerCpuServerLease', e.target.value)}
                         className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
                       />
                     </div>
@@ -1390,8 +1444,8 @@ const LandingPage = () => {
                       <label className="block text-xs text-slate-400 mb-1">Запросов на GPU сервер</label>
                       <input
                         type="number"
-                        value={params.tokensPerGpuServer}
-                        onChange={(e) => updateParam('tokensPerGpuServer', e.target.value)}
+                        value={params.requestsPerGpuServer}
+                        onChange={(e) => updateParam('requestsPerGpuServer', e.target.value)}
                         className="w-full p-2 rounded bg-slate-900 text-white border border-slate-700 text-sm"
                       />
                     </div>
@@ -1429,7 +1483,7 @@ const LandingPage = () => {
                   &nbsp;&nbsp;&nbsp;"cloud": &#123;<br />
                   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"name": "AWS CPU instance",<br />
                   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"cost_per_instance": {params.cloudCostPerMonth},<br />
-                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"requests_per_instance": {params.tokensPerInstance},<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"requests_per_instance": {params.requestsPerCloudInstance},<br />
                   &nbsp;&nbsp;&nbsp;&#125;,<br />
                   &#125;
                 </div>
@@ -1453,70 +1507,67 @@ const LandingPage = () => {
               <div className="grid grid-cols-1 gap-4">
                 <div className="flex justify-between items-center">
                   <p className="text-sm font-medium">API vs Выделенный сервер:</p>
-                  <Badge className="bg-blue-600">{formatNumber(parseInt(intersectionPoints.apiVsServer))} запросов</Badge>
+                  <Badge className="bg-blue-600">
+                    {intersectionPoints.apiVsServer === 'не найдено' 
+                      ? 'не найдено' 
+                      : formatNumber(parseInt(intersectionPoints.apiVsServer))} 
+                    {intersectionPoints.apiVsServer !== 'не найдено' && ' запросов'}
+                  </Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <p className="text-sm font-medium">Облако vs Выделенный сервер:</p>
-                  <Badge className="bg-purple-600">{formatNumber(parseInt(intersectionPoints.cloudVsServer))} запросов</Badge>
+                  <Badge className="bg-purple-600">
+                    {intersectionPoints.cloudVsServer === 'не найдено' 
+                      ? 'не найдено' 
+                      : formatNumber(parseInt(intersectionPoints.cloudVsServer))} 
+                    {intersectionPoints.cloudVsServer !== 'не найдено' && ' запросов'}
+                  </Badge>
                 </div>
                 <div className="flex justify-between items-center">
-                  <p className="text-sm font-medium">API vs Облако:</p>
-                  <Badge className="bg-amber-600">{formatNumber(parseInt(intersectionPoints.apiVsServer) * 0.7)} запросов</Badge>
+                  <p className="text-sm font-medium">API vs Облачный хостинг:</p>
+                  <Badge className="bg-amber-600">
+                    {intersectionPoints.apiVsCloud === 'не найдено' 
+                      ? 'не найдено' 
+                      : formatNumber(parseInt(intersectionPoints.apiVsCloud))} 
+                    {intersectionPoints.apiVsCloud !== 'не найдено' && ' запросов'}
+                  </Badge>
                 </div>
                 <div className="flex justify-between items-center">
-                  <p className="text-sm font-medium">CPU vs GPU облако:</p>
-                  <Badge className="bg-green-600">{formatNumber(parseInt(intersectionPoints.apiVsServer) * 1.2)} запросов</Badge>
+                  <p className="text-sm font-medium">CPU vs GPU в облаке:</p>
+                  <Badge className="bg-green-600">
+                    {intersectionPoints.cpuVsGpuCloud === 'не найдено' 
+                      ? 'не найдено' 
+                      : formatNumber(parseInt(intersectionPoints.cpuVsGpuCloud))} 
+                    {intersectionPoints.cpuVsGpuCloud !== 'не найдено' && ' запросов'}
+                  </Badge>
                 </div>
-              </div>
-            </div>
-
-            <div className="mt-6 bg-slate-800/80 p-4 rounded-md">
-              <h4 className="font-medium mb-3">Рекомендация по инфраструктуре:</h4>
-              <div className="bg-slate-900/80 p-3 rounded-md">
-                {params.requestsPerMonth < 2000000 ? (
-                  <div className="flex items-start">
-                    <div className="w-8 h-8 rounded-full bg-blue-900/30 flex items-center justify-center mr-3 mt-1">
-                      <Shield className="w-4 h-4 text-blue-400" />
-                    </div>
-                    <div>
-                      <div className="font-medium">API решение</div>
-                      <p className="text-sm text-slate-300 mt-1">
-                        При объеме до 2 млн запросов в месяц наиболее экономически эффективно 
-                        использовать готовое API решение. Вам не потребуется поддерживать собственную инфраструктуру.
-                      </p>
-                    </div>
-                  </div>
-                ) : params.requestsPerMonth < 5000000 ? (
-                  <div className="flex items-start">
-                    <div className="w-8 h-8 rounded-full bg-purple-900/30 flex items-center justify-center mr-3 mt-1">
-                      <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="font-medium">Облачное решение</div>
-                      <p className="text-sm text-slate-300 mt-1">
-                        При объеме от 2 до 5 млн запросов рекомендуется использовать облачную 
-                        инфраструктуру для оптимального баланса стоимости и масштабируемости.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-start">
-                    <div className="w-8 h-8 rounded-full bg-green-900/30 flex items-center justify-center mr-3 mt-1">
-                      <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="font-medium">Выделенные серверы</div>
-                      <p className="text-sm text-slate-300 mt-1">
-                        При объеме от 5 млн запросов в месяц рекомендуется использовать 
-                        выделенные серверы для максимальной экономической эффективности.
-                      </p>
-                    </div>
-                  </div>
-                )}
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-medium">API vs Лизинг:</p>
+                  <Badge className="bg-blue-600">
+                    {intersectionPoints.apiVsLease === 'не найдено' 
+                      ? 'не найдено' 
+                      : formatNumber(parseInt(intersectionPoints.apiVsLease))} 
+                    {intersectionPoints.apiVsLease !== 'не найдено' && ' запросов'}
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-medium">Облако vs Лизинг:</p>
+                  <Badge className="bg-purple-600">
+                    {intersectionPoints.cloudVsLease === 'не найдено' 
+                      ? 'не найдено' 
+                      : formatNumber(parseInt(intersectionPoints.cloudVsLease))} 
+                    {intersectionPoints.cloudVsLease !== 'не найдено' && ' запросов'}
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-medium">Лизинг vs Сервер:</p>
+                  <Badge className="bg-green-600">
+                    {intersectionPoints.leaseVsServer === 'не найдено' 
+                      ? 'не найдено' 
+                      : formatNumber(parseInt(intersectionPoints.leaseVsServer))} 
+                    {intersectionPoints.leaseVsServer !== 'не найдено' && ' запросов'}
+                  </Badge>
+                </div>
               </div>
             </div>
           </div>
