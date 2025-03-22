@@ -208,17 +208,14 @@ export const useReviews = () => {
     try {
       console.log(`Обновление статуса отзыва: ${reviewId} на ${status}`);
       
-      // Форматируем комментарий модератора если он есть
-      const formattedComment = comment ? JSON.stringify({ 
-        message: comment,
-        status 
-      }) : undefined;
+      // Передаем комментарий без форматирования для ручной модерации
+      const moderatorComment = comment;
       
       // Используем функцию из lib/api.ts для обновления статуса
       const result = await import('@/lib/api').then(api => api.updateReviewStatus(reviewId, {
         status,
         rejection_reason: status === 'rejected' ? comment : undefined,
-        moderator_comment: formattedComment
+        moderator_comment: moderatorComment
       }));
       
       if (result && result._id) {

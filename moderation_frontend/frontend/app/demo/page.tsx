@@ -13,7 +13,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { RenderModerationComment, ReviewColumns, StatusBadge } from "./components";
+import { CreateReviewForm, RenderModerationComment, ReviewColumns, StatusBadge } from "./components";
 import { useFormatDate, useReviews } from "./hooks";
 import { Review, ReviewStatus } from "./types";
 
@@ -148,22 +148,25 @@ export default function DemoPage() {
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold">Отзывы</h2>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => fetchReviews(true)}
-            disabled={loadingReviews}
-          >
-            {loadingReviews ? (
-              <>Загрузка...</>
-            ) : isRefreshing ? (
-              <>Обновление...</>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" /> Обновить
-              </>
-            )}
-          </Button>
+          <div className="flex space-x-2">
+            <CreateReviewForm movieId={DEMO_MOVIE_ID} onSuccess={() => fetchReviews(true)} />
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => fetchReviews(true)}
+              disabled={loadingReviews}
+            >
+              {loadingReviews ? (
+                <>Загрузка...</>
+              ) : isRefreshing ? (
+                <>Обновление...</>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" /> Обновить
+                </>
+              )}
+            </Button>
+          </div>
         </div>
         
         <Separator />
