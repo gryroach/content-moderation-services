@@ -1,18 +1,19 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { CheckCircle, XCircle, User, Calendar, Film, AlertTriangle, Clock } from "lucide-react"
-import { moderateReview, parseAutoModerationResult, formatDate, truncateString } from "@/lib/moderation-api"
-import { ModerationStatus, ModerationStatusRequest, type ReviewDB } from "@/types/moderation-api"
-import AutoModerationDisplay from "./auto-moderation-display"
+import { RenderModerationComment } from "@/app/demo/page"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { safeAccess, isDefined } from "@/lib/error-handling"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { isDefined, safeAccess } from "@/lib/error-handling"
+import { formatDate, moderateReview, parseAutoModerationResult, truncateString } from "@/lib/moderation-api"
+import { ModerationStatus, ModerationStatusRequest, type ReviewDB } from "@/types/moderation-api"
+import { AlertTriangle, Calendar, CheckCircle, Clock, Film, User, XCircle } from "lucide-react"
+import { useEffect, useState } from "react"
+import AutoModerationDisplay from "./auto-moderation-display"
 
 interface ReviewCardProps {
   review: ReviewDB
@@ -217,6 +218,16 @@ export default function ReviewCard({ review, onModerationComplete }: ReviewCardP
               rows={3}
               disabled={isSubmitting}
             />
+          </div>
+        )}
+
+        {review.moderator_comment && (
+          <div className="mt-2">
+            <RenderModerationComment comment={
+              typeof review.moderator_comment === 'string' 
+                ? review.moderator_comment 
+                : JSON.stringify(review.moderator_comment)
+            } />
           </div>
         )}
       </CardContent>
