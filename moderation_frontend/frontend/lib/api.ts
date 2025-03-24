@@ -1,7 +1,6 @@
 import { getToken as getStoredToken } from "@/lib/token-storage"
 import type { CreateReviewData, Movie, Review, ReviewsQueryParams, StatusUpdate } from "@/types/api"
 import { v4 as uuidv4 } from "uuid"
-import { suppressErrors } from "./error-handling"
 import { mockMovies, mockReviews } from "./mock-data"
 
 // In development mode, use mock data
@@ -255,7 +254,7 @@ export async function getMovieReviews(
 }
 
 export async function getReview(id: string): Promise<Review | null> {
-  return suppressErrors(async () => {
+  try {
     if (isDev) {
       // Simulate API delay
       await new Promise((resolve) => setTimeout(resolve, 200))
@@ -274,7 +273,10 @@ export async function getReview(id: string): Promise<Review | null> {
       console.warn(`Failed to get review with ID ${id}:`, error)
       return null
     }
-  }, null)
+  } catch (error) {
+    console.warn(`Error getting review with ID ${id}:`, error)
+    return null
+  }
 }
 
 export async function submitReview(data: CreateReviewData): Promise<Review | null> {
@@ -373,10 +375,26 @@ export async function submitReview(data: CreateReviewData): Promise<Review | nul
 
 export async function updateReviewStatus(id: string, status: StatusUpdate): Promise<Review | null> {
   try {
-    // Try the real API first
-    const result = await apiRequest<Review>(`/reviews/${id}/status`, {
-      method: "PATCH",
-      body: JSON.stringify(status),
+    console.log('Обновление статуса отзыва:', id, status);
+    
+    // Подготавливаем строку запроса согласно документации API
+    const queryParams: Record<string, any> = {
+      status_update: status.status,
+      moderation_comment: status.moderator_comment || "" // Параметр обязателен по документации
+    };
+    
+    // Добавляем rejection_reason, если есть
+    if (status.rejection_reason) {
+      queryParams.rejection_reason = status.rejection_reason;
+    }
+    
+    // Формируем query-строку
+    const queryString = buildQueryString(queryParams);
+    
+    // Try the real API first - теперь передаем параметры в query, а не в body
+    const result = await apiRequest<Review>(`/reviews/${id}/status${queryString}`, {
+      method: "PATCH"
+      // Не используем body, так как параметры в query
     })
 
     // If we got a valid result, return it
@@ -397,6 +415,12 @@ export async function updateReviewStatus(id: string, status: StatusUpdate): Prom
     if (status.rejection_reason) {
       mockReviews[reviewIndex].rejection_reason = status.rejection_reason
     }
+    
+    // Добавляем обработку модераторского комментария
+    if (status.moderator_comment !== undefined) {
+      // @ts-ignore - для обхода типизации
+      mockReviews[reviewIndex].moderator_comment = status.moderator_comment;
+    }
 
     mockReviews[reviewIndex].moderation_at = new Date().toISOString()
     mockReviews[reviewIndex].moderator_id = "current-moderator-id" // In a real app, this would be the actual moderator ID
@@ -416,10 +440,43 @@ export async function updateReviewStatus(id: string, status: StatusUpdate): Prom
     if (status.rejection_reason) {
       mockReviews[reviewIndex].rejection_reason = status.rejection_reason
     }
+    
+    // Добавляем обработку модераторского комментария
+    if (status.moderator_comment !== undefined) {
+      // @ts-ignore - для обхода типизации
+      mockReviews[reviewIndex].moderator_comment = status.moderator_comment;
+    }
 
     mockReviews[reviewIndex].moderation_at = new Date().toISOString()
 
     return mockReviews[reviewIndex]
+  }
+}
+
+export async function deleteReview(id: string): Promise<boolean> {
+  try {
+    console.log(`Удаление рецензии с ID: ${id}`);
+    
+    // Вызов API для удаления рецензии
+    const response = await fetch(`${API_BASE_URL}/reviews/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+      },
+      mode: "cors",
+      credentials: "include",
+    });
+    
+    if (response.status === 204) {
+      console.log(`Рецензия с ID: ${id} успешно удалена`);
+      return true;
+    }
+    
+    console.warn(`Ошибка при удалении рецензии: ${response.status} ${response.statusText}`);
+    return false;
+  } catch (error) {
+    console.error(`Ошибка при удалении рецензии с ID ${id}:`, error);
+    return false;
   }
 }
 

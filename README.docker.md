@@ -28,12 +28,13 @@
 
 Проект разделен на несколько docker-compose файлов для модульности:
 
-| Файл                            | Описание                              |
-| ------------------------------- | ------------------------------------- |
-| `docker-compose.yml`            | Основные сервисы (nginx, ugc-api)     |
-| `docker-compose.mongodb.yml`    | Шардированная MongoDB с репликацией   |
-| `docker-compose.kafka.yml`      | Kafka-кластер и UI для мониторинга    |
-| `docker-compose.moderation.yml` | Сервисы модерации (API, БД, frontend) |
+| Файл                            | Описание                                            |
+| ------------------------------- | --------------------------------------------------- |
+| `docker-compose.yml`            | Основные сервисы (nginx, ugc-api)                   |
+| `docker-compose.mongodb.yml`    | Шардированная MongoDB с репликацией                 |
+| `docker-compose.kafka.yml`      | Kafka-кластер и UI для мониторинга                  |
+| `docker-compose.moderation.yml` | Сервисы модерации (API, БД, frontend)               |
+| `docker-compose.logs.yml`       | Система мониторинга логов (Promtail, Loki, Grafana) |
 
 Такое разделение позволяет запускать только нужные компоненты и упрощает разработку.
 
@@ -221,6 +222,22 @@ make ps-kafka
 
 # Просмотр логов Kafka
 make logs-kafka
+```
+
+### Управление системой мониторинга логов
+
+```bash
+# Запуск системы мониторинга логов
+make run-logs
+
+# Остановка системы мониторинга логов
+make down-logs
+
+# Просмотр статуса системы мониторинга
+make ps-logs
+
+# Просмотр логов системы мониторинга
+make logs-logs
 ```
 
 ## Отладка

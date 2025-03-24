@@ -13,24 +13,38 @@ import { submitReview } from "@/lib/api"
 import { AlertCircle, CheckCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import type React from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 interface ReviewFormProps {
   movieId: string
   movieTitle: string
   onReviewSubmitted?: () => void
+  initialValues?: {
+    title: string
+    text: string
+    rating: number
+  }
 }
 
-export default function ReviewForm({ movieId, movieTitle, onReviewSubmitted }: ReviewFormProps) {
-  const [title, setTitle] = useState("")
-  const [reviewText, setReviewText] = useState("")
-  const [rating, setRating] = useState(0)
+export default function ReviewForm({ movieId, movieTitle, onReviewSubmitted, initialValues }: ReviewFormProps) {
+  const [title, setTitle] = useState(initialValues?.title || "")
+  const [reviewText, setReviewText] = useState(initialValues?.text || "")
+  const [rating, setRating] = useState(initialValues?.rating || 0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const { isAuthenticated } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
+
+  // Эффект для обновления состояний при изменении initialValues
+  useEffect(() => {
+    if (initialValues) {
+      setTitle(initialValues.title || "")
+      setReviewText(initialValues.text || "")
+      setRating(initialValues.rating || 0)
+    }
+  }, [initialValues])
 
   // Исправим обработчик отправки формы, чтобы он правильно логировал данные
   const handleSubmit = async (e: React.FormEvent) => {

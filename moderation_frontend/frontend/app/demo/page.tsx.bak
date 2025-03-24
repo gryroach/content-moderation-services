@@ -1,0 +1,2260 @@
+'use client'
+
+import ReviewForm from "@/components/review-form"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog"
+import {
+  Badge
+} from "@/components/ui/badge"
+import {
+  Button
+} from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
+import { toast } from "@/components/ui/use-toast"
+import { getReviews } from '@/lib/api'
+import { mockReviews } from '@/lib/mock-data'; // Импортируем мок данные для отладки
+import { getToken } from "@/lib/token-storage"
+import { cn } from "@/lib/utils"
+import {
+  ActivitySquare,
+  AlertTriangle,
+  BookOpen,
+  Bot,
+  Calendar,
+  CheckCircle,
+  Clock,
+  Filter,
+  Globe,
+  LockKeyhole,
+  MessageCircle,
+  RotateCw,
+  Search,
+  Tag,
+  ThumbsDown,
+  ThumbsUp,
+  User,
+  XCircle
+} from "lucide-react"
+import dynamic from 'next/dynamic'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+
+// Шаблоны отзывов (добавляем заголовки и рейтинги для каждого шаблона)
+const REVIEW_TEMPLATES = {
+  positive: {
+    title: "Отличный фильм!",
+    rating: 5,
+    text: "Это один из лучших фильмов, которые я видел! Прекрасный сюжет, великолепная актерская игра, и потрясающие визуальные эффекты. Однозначно рекомендую всем любителям кино. Режиссер проделал фантастическую работу, создав по-настоящему запоминающееся произведение."
+  },
+  negative: {
+    title: "Разочарован фильмом",
+    rating: 2,
+    text: "К сожалению, фильм не оправдал моих ожиданий. Сюжет предсказуемый, актерская игра посредственная, а спецэффекты на уровне фильмов десятилетней давности. Деньги потрачены зря, не рекомендую тратить время на просмотр. Чувствуется, что создатели фокусировались на коммерческом успехе, а не на качестве."
+  },
+  neutral: {
+    title: "Средний фильм на один раз",
+    rating: 3,
+    text: "Фильм можно посмотреть один раз, но особого впечатления не производит. Сюжет местами интересный, но есть и затянутые моменты. Актеры играют неплохо, но не выдающе. В целом, на твердую троечку."
+  },
+  short: {
+    title: "Тест",
+    rating: 3,
+    text: "Тест."
+  },
+  toxic: {
+    title: "УЖАСНЫЙ ФИЛЬМ!!!",
+    rating: 1,
+    text: "ЭТО САМЫЙ ОТВРАТИТЕЛЬНЫЙ ФИЛЬМ, КОТОРЫЙ Я КОГДА-ЛИБО ВИДЕЛ!!! АКТЕРЫ ИГРАЮТ ПРОСТО УЖАСНО, ВСЕ ГЛУПО И БЕССМЫСЛЕННО!!! НИКОГДА БОЛЬШЕ НЕ ПОЙДУ НА ФИЛЬМЫ ЭТОГО РЕЖИССЕРА!!! ТРЕБУЮ ВЕРНУТЬ ДЕНЬГИ ЗА ПОТРАЧЕННОЕ ВРЕМЯ!!!"
+  },
+  offensive: {
+    title: "Не тратьте время",
+    rating: 1,
+    text: "Фильм полный отстой. Режиссер идиот, сценарист бездарность. Главный актер такой тупой, что даже не может нормально текст выучить. Все, кто хвалит этот фильм - продажные критики или люди с отсутствием вкуса. Не рекомендую никому с мозгами."
+  },
+  legal_issues: {
+    title: "Проблемы с авторскими правами",
+    rating: 2,
+    text: "Фильм является явным плагиатом известного французского триллера 2015 года. Создатели просто украли сюжет и персонажей, немного изменив имена. Удивительно, что юристы правообладателей еще не подали в суд на эту наглую кражу интеллектуальной собственности."
+  }
+};
+
+
+const CheckCircle = dynamic(() => import("lucide-react").then(mod => mod.CheckCircle), { ssr: false });
+const Loader2 = dynamic(() => import("lucide-react").then(mod => mod.Loader2), { ssr: false });
+const MessageSquare = dynamic(() => import("lucide-react").then(mod => mod.MessageSquare), { ssr: false });
+const XCircle = dynamic(() => import("lucide-react").then(mod => mod.XCircle), { ssr: false });
+const RefreshCw = dynamic(() => import("lucide-react").then(mod => mod.RefreshCw), { ssr: false });
+const Calendar = dynamic(() => import("lucide-react").then(mod => mod.Calendar), { ssr: false });
+
+// Константа для ID демо-фильма (используем реальный UUID из моковых данных)
+const DEMO_MOVIE_ID = "11111111-1111-1111-1111-111111111111" // The Dark Knight
+const DEMO_MOVIE_TITLE = "The Dark Knight"
+
+// Тип для статуса отзыва
+type ReviewStatus = 'approved' | 'rejected' | 'pending'
+
+// Функция для получения бейджа статуса - перемещена выше, чтобы быть доступной для ReviewCard
+const getStatusBadge = (status: ReviewStatus) => {
+  switch (status) {
+    case 'approved':
+      return (
+        <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
+          <CheckCircle className="h-3 w-3 mr-1" /> Одобрен
+        </Badge>
+      )
+    case 'rejected':
+      return (
+        <Badge className="bg-red-500/10 text-red-500 border-red-500/20">
+          <XCircle className="h-3 w-3 mr-1" /> Отклонен
+        </Badge>
+      )
+    default:
+      return (
+        <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+          <AlertTriangle className="h-3 w-3 mr-1" /> На проверке
+        </Badge>
+      )
+  }
+}
+
+const ReviewCard = ({ 
+  review, 
+  onModerate, 
+  isNew,
+  handleStatusChange,
+  setPendingReviewDialogOpen,
+  setReviewToPending,
+  formatDate
+}: { 
+  review: any, 
+  onModerate: (review: any) => void, 
+  isNew?: boolean,
+  handleStatusChange?: (id: string, status: 'approved' | 'rejected' | 'pending') => void,
+  setPendingReviewDialogOpen?: (open: boolean) => void,
+  setReviewToPending?: (review: {id: string, title: string} | null) => void,
+  formatDate: (dateString: string) => string
+}) => {
+  const isProcessed = review.status !== 'pending';
+  
+  return (
+    <Card 
+      className={cn(
+        "transition-all duration-300 hover:shadow-md", 
+        isNew && "border-blue-400 animate-pulse", 
+        review.status === 'approved' && "border-l-4 border-l-green-500",
+        review.status === 'rejected' && "border-l-4 border-l-red-500",
+        review.status === 'pending' && "border-l-4 border-l-yellow-500"
+      )}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <div>
+            <h3 className="font-semibold">{review.title}</h3>
+            <div className="text-xs text-muted-foreground mt-1">
+              {formatDate(review.created_at)} | Пользователь: {review.user_name}
+            </div>
+          </div>
+          {getStatusBadge(review.status)}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="whitespace-pre-line text-sm mb-4">
+          {review.review_text.length > 200 
+            ? `${review.review_text.slice(0, 200)}...` 
+            : review.review_text}
+        </div>
+        
+        {/* Отображаем результаты автомодерации - используем обработанные данные, если они есть */}
+        {review.auto_moderation_processed ? (
+          <div className="mt-3">
+            <RenderModerationComment comment={review.auto_moderation_processed} />
+          </div>
+        ) : review.auto_moderation_result && (
+          <div className="mt-3">
+            <RenderModerationComment comment={review.auto_moderation_result} />
+          </div>
+        )}
+        
+        {review.status === 'rejected' && review.rejection_reason && (
+          <div className="mt-2 text-xs bg-red-500/5 border border-red-500/20 p-2 rounded-md">
+            <div className="font-medium text-red-500">Причина отклонения:</div>
+            <div>{review.rejection_reason}</div>
+          </div>
+        )}
+        
+        {/* Отображаем комментарий модератора - используем обработанные данные, если они есть */}
+        {review.moderator_comment_processed ? (
+          <div className="mt-3">
+            <RenderModerationComment comment={review.moderator_comment_processed} />
+          </div>
+        ) : review.moderator_comment && (
+          <div className="mt-3">
+            <RenderModerationComment comment={review.moderator_comment} />
+          </div>
+        )}
+      </CardContent>
+      <CardFooter>
+        <div className="flex w-full justify-between">
+          <Button 
+            variant="default" 
+            size="sm" 
+            onClick={() => onModerate(review)}
+          >
+            Модерировать
+          </Button>
+          
+          {/* Кнопка быстрого возврата на модерацию для обработанных отзывов */}
+          {isProcessed && handleStatusChange && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-yellow-400 text-yellow-600 hover:bg-yellow-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Проверяем наличие функций для диалога подтверждения
+                if (setPendingReviewDialogOpen && setReviewToPending) {
+                  setReviewToPending({
+                    id: review._id,
+                    title: review.title
+                  });
+                  setPendingReviewDialogOpen(true);
+                } else if (handleStatusChange) {
+                  // Используем стандартное окно подтверждения, если диалог не доступен
+                  if (confirm(`Вернуть отзыв "${review.title}" на модерацию?`)) {
+                    handleStatusChange(review._id, 'pending');
+                  }
+                }
+              }}
+            >
+              <AlertTriangle className="h-3 w-3 mr-1" /> В ожидание
+            </Button>
+          )}
+        </div>
+      </CardFooter>
+    </Card>
+  );
+};
+
+// Определяем типы для фильтрации и сортировки
+type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
+type SortOption = 'newest' | 'oldest';
+// Добавляем тип для фильтрации по времени
+type DateFilter = 'all' | 'last5min' | 'last1hour' | 'today';
+// Добавляем тип для фильтрации по уровню уверенности AI
+type ConfidenceFilter = 'all' | 'high' | 'medium' | 'low';
+
+
+const RenderModerationComment = ({ comment }: { comment: any }) => {
+  let text, parsedData, isAI;
+  
+  // Определяем тип комментария
+  if (typeof comment === 'object' && comment !== null) {
+    // Если это уже объект, проверяем, содержит ли он поля, характерные для AI-комментария
+    if (comment.status !== undefined || comment.confidence !== undefined || 
+        comment.issues !== undefined || comment.tags !== undefined) {
+      // Это AI-комментарий
+      isAI = true;
+      parsedData = comment;
+      text = comment.message || 
+             (comment.issues && comment.issues.map((i: any) => i.description).join(', ')) || 
+             '';
+    } else if ('parsedData' in comment) {
+      // Уже обработанный результат
+      ({ text, parsedData, isAI } = comment);
+    } else {
+      // Обычный объект, не AI-комментарий
+      isAI = false;
+      parsedData = comment;
+      text = JSON.stringify(comment, null, 2);
+    }
+  } else if (typeof comment === 'string') {
+    // Если это строка, пробуем распарсить как JSON, если она имеет формат JSON
+    if ((comment.trim().startsWith('{') && comment.trim().endsWith('}')) || 
+        (comment.trim().startsWith('[') && comment.trim().endsWith(']'))) {
+      try {
+        const parsed = JSON.parse(comment);
+        // Проверяем, имеет ли распарсенный объект структуру AI-комментария
+        if (parsed.status !== undefined || parsed.confidence !== undefined || 
+            parsed.issues !== undefined || parsed.tags !== undefined) {
+          isAI = true;
+          parsedData = parsed;
+          text = parsed.message || 
+                 (parsed.issues && parsed.issues.map((i: any) => i.description).join(', ')) || 
+                 comment;
+        } else {
+          // Обычный JSON, но не AI-комментарий
+          isAI = false;
+          parsedData = parsed;
+          text = comment;
+        }
+      } catch (e) {
+        // Не удалось распарсить как JSON
+        isAI = false;
+        parsedData = null;
+        text = comment;
+      }
+    } else {
+      // Обычная строка, не JSON
+      isAI = false;
+      parsedData = null;
+      text = comment;
+    }
+  } else {
+    // Другие типы данных
+    isAI = false;
+    parsedData = null;
+    text = String(comment);
+  }
+
+  if (!parsedData && !isAI) {
+    // Обычный текст комментария (не AI)
+    return (
+      <div className="text-sm rounded-md border p-3 bg-background">
+        <div className="flex items-start gap-2">
+          <User className="h-4 w-4 text-blue-600 mt-0.5" />
+          <div>
+            <div className="font-semibold text-blue-600 text-xs mb-1">Комментарий модератора:</div>
+            <div className="whitespace-pre-line">{text}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // AI модерация - используем parsedData
+  const status = parsedData?.status || 'pending';
+  const confidence = parsedData?.confidence || 0;
+  const tags = parsedData?.tags || [];
+  const issues = parsedData?.issues || [];
+  
+  let statusColor = '';
+  let statusText = '';
+  
+  switch (status) {
+    case 'approved':
+    case 'APPROVED':
+    case 'approve':
+      statusColor = 'bg-green-500 text-white';
+      statusText = 'Одобрено';
+      break;
+    case 'rejected':
+    case 'REJECTED':
+    case 'reject':
+      statusColor = 'bg-red-500 text-white';
+      statusText = 'Отклонено';
+      break;
+    default:
+      statusColor = 'bg-yellow-500 text-white';
+      statusText = 'На проверке';
+  }
+  
+  return (
+    <div className="text-sm rounded-md border p-3 bg-background">
+      <div className="flex items-start gap-2">
+        <Bot className="h-4 w-4 text-purple-600 mt-0.5" />
+        <div className="w-full">
+          <div className="flex justify-between items-center mb-2">
+            <div className="font-semibold text-purple-600 text-xs">
+              {issues && issues.length > 0 ? 'Оценка ИИ-модератора:' : 'Комментарий модератора:'}
+            </div>
+            <Badge className={statusColor}>{statusText}</Badge>
+          </div>
+          
+          {/* Шкала уверенности */}
+          {confidence > 0 && (
+            <div className="mb-2">
+              <div className="text-xs mb-1 flex justify-between">
+                <span>Уверенность:</span>
+                <span>{Math.round(confidence * 100)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                <div 
+                  className={`h-1.5 rounded-full ${
+                    confidence > 0.7 ? 'bg-green-500' : 
+                    confidence > 0.4 ? 'bg-yellow-400' : 'bg-red-500'
+                  }`} 
+                  style={{ width: `${confidence * 100}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
+          
+          {/* Теги */}
+          {tags && tags.length > 0 && (
+            <div className="mb-2">
+              <div className="text-xs font-medium mb-1">Теги:</div>
+              <div className="flex flex-wrap gap-1">
+                {tags.map((tag: string, i: number) => (
+                  <Badge key={i} variant="outline" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Проблемы */}
+          {issues && issues.length > 0 && (
+            <div className="mb-2">
+              <div className="text-xs font-medium mb-1">Обнаруженные проблемы:</div>
+              <ul className="text-xs space-y-1 list-disc pl-4">
+                {issues.map((issue: any, i: number) => (
+                  <li key={i}>
+                    {issue.description || issue.text || issue}
+                    {issue.severity && (
+                      <Badge 
+                        variant="outline" 
+                        className={`ml-1 text-[10px] ${
+                          issue.severity === 'high' ? 'border-red-500 text-red-500' : 
+                          issue.severity === 'medium' ? 'border-yellow-500 text-yellow-500' : 
+                          'border-blue-500 text-blue-500'
+                        }`}
+                      >
+                        {issue.severity}
+                      </Badge>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
+          {/* Сообщение */}
+          {text && (
+            <div className="whitespace-pre-line text-xs">
+              {text}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DemoPage = () => {
+  const [activeTab, setActiveTab] = useState<string>("user")
+  const [reviewToModerate, setReviewToModerate] = useState<any>(null)
+  const [moderatorComment, setModeratorComment] = useState<string>("")
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
+  const [reviews, setReviews] = useState<any[]>([])
+  const [loadingReviews, setLoadingReviews] = useState<boolean>(false)
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false)
+  const [error, setError] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all')
+  const [sortOption, setSortOption] = useState<SortOption>('newest')
+  const [searchQuery, setSearchQuery] = useState<string>('')
+  const [pendingReviewDialogOpen, setPendingReviewDialogOpen] = useState<boolean>(false)
+  const [reviewToPending, setReviewToPending] = useState<{id: string, title: string} | null>(null)
+  
+  // Дополнительные фильтры
+  const [tagFilter, setTagFilter] = useState<string>('all')
+  const [lawFilter, setLawFilter] = useState<string>('all')
+  const [confidenceFilter, setConfidenceFilter] = useState<ConfidenceFilter>('all')
+  const [timeZoneOffset, setTimeZoneOffset] = useState<number>(3) // UTC+3 по умолчанию
+  
+  // Перемещаем функцию formatDate в начало компонента
+  // Функция для форматирования даты с учетом часового пояса
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "";
+    
+    const date = new Date(dateString);
+    
+    // Получаем локальное смещение в минутах
+    const localOffset = date.getTimezoneOffset();
+    
+    // Применяем пользовательское смещение (в часах)
+    const userOffset = timeZoneOffset;
+    
+    // Создаем новую дату с применением смещения
+    const adjustedDate = new Date(date.getTime() + (localOffset * 60 * 1000) + (userOffset * 60 * 60 * 1000));
+    
+    return adjustedDate.toLocaleString('ru-RU', {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }) + ` (UTC${userOffset >= 0 ? '+' : ''}${userOffset})`;
+  };
+  
+  // Состояние формы для отправки отзыва
+  const [formValues, setFormValues] = useState({
+    title: "",
+    text: "",
+    rating: 5
+  })
+  
+  const [activeUserTab, setActiveUserTab] = useState("write") // write | my-reviews
+  const [newReviewIds, setNewReviewIds] = useState<string[]>([])
+  // Ref для отслеживания последней позиции прокрутки
+  const lastScrollPositionRef = useRef<number>(0);
+  // Ref для ссылки на интервал обновления
+  const updateIntervalRef = useRef<any>(null);
+
+  // Функция для загрузки отзывов
+  const fetchReviews = async (showLoading = true) => {
+    if (showLoading) {
+      setLoadingReviews(true);
+    }
+    setError(null);
+
+    try {
+      const response = await fetch('/api/reviews?' + new URLSearchParams({
+        movie_id: DEMO_MOVIE_ID,
+      }));
+      
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Создаем карту существующих отзывов для сохранения локальных изменений
+        const existingReviewsMap = new Map(reviews.map(review => [review._id, review]));
+        
+        // Пытаемся восстановить обработанные данные из localStorage
+        let localStorageData;
+        try {
+          const savedData = localStorage.getItem('reviewsProcessedData');
+          if (savedData) {
+            localStorageData = JSON.parse(savedData);
+          }
+        } catch (e) {
+          console.error('Ошибка при восстановлении из localStorage:', e);
+          localStorageData = {};
+        }
+        
+        // Обрабатываем новые отзывы, сохраняя локальные изменения при необходимости
+        const processedResults = result.map(newReview => {
+            // Если нет, но похоже на JSON, оборачиваем в структуру
+            formattedComment = JSON.stringify({
+              status: status,
+              message: commentToUse
+            });
+          }
+        } else {
+          // Создаем JSON-структуру в зависимости от статуса
+          if (status === 'rejected') {
+            formattedComment = JSON.stringify({
+              status: status,
+              confidence: 1.0,
+              tags: ["moderation"],
+              issues: [
+                {
+                  category: "Модерация",
+                  description: commentToUse,
+                  code: "mod.manual"
+                }
+              ],
+              message: commentToUse
+            });
+          } else if (status === 'approved') {
+            formattedComment = JSON.stringify({
+              status: status,
+              confidence: 1.0,
+              tags: ["moderation", "approved"],
+              message: commentToUse || "Одобрено модератором"
+            });
+          } else { // pending
+            formattedComment = JSON.stringify({
+              status: status,
+              confidence: 0.5,
+              tags: ["moderation", "pending"],
+              message: commentToUse || "Возвращено на модерацию"
+            });
+          }
+        }
+      } catch (e) {
+        // В случае ошибки, используем простой текст
+        console.error("Ошибка при форматировании комментария:", e);
+        formattedComment = commentToUse;
+      }
+      
+      // Формируем URL с query параметрами
+      const queryParams = new URLSearchParams({
+        status_update: status,
+        moderation_comment: formattedComment
+      });
+      
+      // Получаем токен аутентификации
+      const token = getToken(true); // Используем true для получения токена модератора
+      
+      // Отправляем запрос с параметрами в query string, а не в теле
+      const response = await fetch(`/api-ugc/v1/reviews/${reviewId}/status?${queryParams.toString()}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      
+      if (!response.ok) {
+        console.error('Ошибка модерации:', response.status, response.statusText);
+        throw new Error(`Ошибка при модерации отзыва: ${response.status} ${response.statusText}`);
+      }
+      
+      // Обновляем отзыв в локальном состоянии
+      // Создаем обновленный отзыв
+      const existingReview = reviews.find(review => review._id === reviewId);
+      if (!existingReview) return;
+      
+      const updatedReview = {
+        ...existingReview,
+        status,
+        moderator_comment: formattedComment,
+        auto_moderation_processed: existingReview.auto_moderation_processed, // Явно сохраняем обработанные данные автомодерации
+        rejection_reason: status === 'rejected' ? (moderatorComment || '') : undefined
+      };
+      
+      // Применяем prepareReviewModeration к обновленному отзыву для обработки данных модерации
+      const processedUpdatedReview = prepareReviewModeration(updatedReview);
+      
+      // Обновляем список отзывов
+      setReviews(prev => prev.map(review => 
+        review._id === reviewId ? processedUpdatedReview : review
+      ));
+      
+      // Сохраняем обработанные данные в localStorage
+      try {
+        const savedData = localStorage.getItem('reviewsProcessedData') || '{}';
+        const localStorageData = JSON.parse(savedData);
+        
+        // Добавляем/обновляем данные текущего отзыва
+        localStorageData[reviewId] = {
+          auto_moderation_processed: processedUpdatedReview.auto_moderation_processed,
+          moderator_comment_processed: processedUpdatedReview.moderator_comment_processed
+        };
+        
+        localStorage.setItem('reviewsProcessedData', JSON.stringify(localStorageData));
+      } catch (e) {
+        console.error('Ошибка при сохранении в localStorage:', e);
+      }
+      
+      toast({
+        title: "Успешно",
+        description: status === 'approved' 
+          ? "Отзыв одобрен" 
+          : status === 'rejected' 
+            ? "Отзыв отклонен" 
+            : "Отзыв возвращен на модерацию",
+      });
+      
+      // Сбрасываем состояние, только если работаем в форме модерации
+      if (reviewToModerate) {
+        setReviewToModerate(null);
+        setModeratorComment('');
+      }
+    } catch (error) {
+      console.error('Ошибка при модерации отзыва:', error);
+      toast({
+        title: "Ошибка",
+        description: `Не удалось выполнить модерацию: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Обработчик успешной отправки отзыва
+  const handleReviewSubmitted = () => {
+    // Дожидаемся обновления данных с сервера
+    fetchReviews(true);
+    // Переключаемся на вкладку с отзывами пользователя
+    setActiveUserTab("my-reviews");
+  }
+  
+  // Фильтрация отзывов для пользователя (показываем все доступные отзывы)
+  const userReviews = reviews;
+
+  // Функция для фильтрации отзывов с учетом всех фильтров
+  const getFilteredReviews = useCallback(() => {
+    return reviews.filter(review => {
+      // Фильтр по статусу
+      if (statusFilter !== 'all' && review.status !== statusFilter) {
+        return false;
+      }
+      
+      // Фильтр по тексту
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesTitle = review.title?.toLowerCase().includes(query);
+        const matchesText = review.review_text?.toLowerCase().includes(query);
+        const matchesUser = review.user_name?.toLowerCase()?.includes(query);
+        
+        if (!matchesTitle && !matchesText && !matchesUser) {
+          return false;
+        }
+      }
+      
+      // Фильтр по времени создания
+      if (dateFilter !== 'all') {
+        const reviewDate = new Date(review.created_at);
+        const now = new Date();
+        
+        switch (dateFilter) {
+          case 'today':
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            if (reviewDate < today) return false;
+            break;
+          case 'last1hour':
+            const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+            if (reviewDate < hourAgo) return false;
+            break;
+          case 'last5min':
+            const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000);
+            if (reviewDate < fiveMinAgo) return false;
+            break;
+        }
+      }
+      
+      // Фильтр по тегам
+      if (tagFilter !== 'all') {
+        let hasTag = false;
+        
+        // Проверяем теги в комментарии модератора
+        if (review.moderator_comment) {
+          try {
+            const parsed = JSON.parse(review.moderator_comment);
+            if (parsed.tags && Array.isArray(parsed.tags) && parsed.tags.includes(tagFilter)) {
+              hasTag = true;
+            }
+          } catch (e) {
+            // Игнорируем ошибки парсинга
+          }
+        }
+        
+        // Проверяем теги в результатах автомодерации
+        if (!hasTag && review.auto_moderation_result) {
+          if (typeof review.auto_moderation_result === 'string') {
+            try {
+              const parsed = JSON.parse(review.auto_moderation_result);
+              if (parsed.tags && Array.isArray(parsed.tags) && parsed.tags.includes(tagFilter)) {
+                hasTag = true;
+              }
+            } catch (e) {
+              // Игнорируем ошибки парсинга
+            }
+          } else if (typeof review.auto_moderation_result === 'object') {
+            const result = review.auto_moderation_result;
+            if (result.tags && Array.isArray(result.tags) && result.tags.includes(tagFilter)) {
+              hasTag = true;
+            }
+          }
+        }
+        
+        if (!hasTag) return false;
+      }
+      
+      // Фильтр по законам
+      if (lawFilter !== 'all') {
+        let hasLaw = false;
+        
+        // Проверяем законы в комментарии модератора
+        if (review.moderator_comment) {
+          try {
+            const parsed = JSON.parse(review.moderator_comment);
+            if (parsed.issues && Array.isArray(parsed.issues) && 
+                parsed.issues.some((issue: any) => issue.law && issue.law.includes(lawFilter))) {
+              hasLaw = true;
+            }
+          } catch (e) {
+            // Игнорируем ошибки парсинга
+          }
+        }
+        
+        // Проверяем законы в результатах автомодерации
+        if (!hasLaw && review.auto_moderation_result) {
+          if (typeof review.auto_moderation_result === 'string') {
+            try {
+              const parsed = JSON.parse(review.auto_moderation_result);
+              if (parsed.issues && Array.isArray(parsed.issues) && 
+                  parsed.issues.some((issue: any) => issue.law && issue.law.includes(lawFilter))) {
+                hasLaw = true;
+              }
+            } catch (e) {
+              // Игнорируем ошибки парсинга
+            }
+          } else if (typeof review.auto_moderation_result === 'object') {
+            const result = review.auto_moderation_result;
+            if (result.issues && Array.isArray(result.issues) && 
+                result.issues.some((issue: any) => issue.law && issue.law.includes(lawFilter))) {
+              hasLaw = true;
+            }
+          }
+        }
+        
+        if (!hasLaw) return false;
+      }
+      
+      // Фильтр по уровню уверенности AI
+      if (confidenceFilter !== 'all') {
+        let confidence = -1;
+        
+        // Проверяем уверенность в результатах автомодерации
+        if (review.auto_moderation_result) {
+          if (typeof review.auto_moderation_result === 'string') {
+            try {
+              const parsed = JSON.parse(review.auto_moderation_result);
+              if (parsed.confidence !== undefined) {
+                confidence = parsed.confidence;
+              }
+            } catch (e) {
+              // Игнорируем ошибки парсинга
+            }
+          } else if (typeof review.auto_moderation_result === 'object') {
+            if (review.auto_moderation_result.confidence !== undefined) {
+              confidence = review.auto_moderation_result.confidence;
+            }
+          }
+        }
+        
+        // Если не нашли в auto_moderation_result, проверяем в комментарии модератора
+        if (confidence === -1 && review.moderator_comment) {
+          try {
+            const parsed = JSON.parse(review.moderator_comment);
+            if (parsed.confidence !== undefined) {
+              confidence = parsed.confidence;
+            }
+          } catch (e) {
+            // Игнорируем ошибки парсинга
+          }
+        }
+        
+        // Если нигде не нашли информацию об уверенности
+        if (confidence === -1) return false;
+        
+        switch (confidenceFilter) {
+          case 'high':
+            if (confidence < 0.8) return false;
+            break;
+          case 'medium':
+            if (confidence < 0.5 || confidence >= 0.8) return false;
+            break;
+          case 'low':
+            if (confidence >= 0.5) return false;
+            break;
+        }
+      }
+      
+      return true;
+    }).sort((a, b) => {
+      // Сортировка по дате
+      const dateA = new Date(a.created_at);
+      const dateB = new Date(b.created_at);
+      
+      if (sortOption === 'newest') {
+        return dateB.getTime() - dateA.getTime();
+      } else {
+        return dateA.getTime() - dateB.getTime();
+      }
+    });
+  }, [reviews, statusFilter, searchQuery, dateFilter, sortOption, tagFilter, lawFilter, confidenceFilter]);
+
+  // Оптимизированная функция рендеринга списка отзывов
+  const renderReviews = useCallback(() => {
+    console.log('renderReviews вызван с activeTab:', activeTab);
+    console.log('Текущее количество отзывов перед фильтрацией:', reviews.length);
+    
+    const filteredReviews = getFilteredReviews();
+
+    console.log('Количество отфильтрованных отзывов:', filteredReviews.length);
+    console.log('Отфильтрованные отзывы:', filteredReviews);
+
+    if (filteredReviews.length === 0) {
+      return (
+        <div className="text-center py-10 text-muted-foreground">
+          <MessageSquare className="h-10 w-10 mx-auto mb-2 opacity-20" />
+          <p>Отзывов не найдено</p>
+        </div>
+      );
+    }
+
+    return filteredReviews.map(review => (
+      <ReviewCard 
+        key={review._id} 
+        review={review} 
+        onModerate={setReviewToModerate}
+        handleStatusChange={handleModerateReview}
+        setPendingReviewDialogOpen={setPendingReviewDialogOpen}
+        setReviewToPending={setReviewToPending}
+        isNew={newReviewIds.includes(review._id)}
+        formatDate={formatDate}
+      />
+    ));
+  }, [reviews, getFilteredReviews, handleModerateReview, newReviewIds, setPendingReviewDialogOpen, setReviewToPending, formatDate]);
+
+  console.log('Рендеринг DemoPage, состояния:', { 
+    reviewsCount: reviews.length, 
+    loading: loadingReviews, 
+    error, 
+    activeTab 
+  });
+
+  // Компонент для фильтров и сортировки
+  const FilterSortPanel = () => {
+    // Извлекаем уникальные теги и законы из отзывов
+    const { uniqueTags, uniqueLaws } = useMemo(() => {
+      const tags = new Set<string>();
+      const laws = new Set<string>();
+      
+      reviews.forEach(review => {
+        // Извлекаем теги и законы из комментария модератора
+        if (review.moderator_comment) {
+          try {
+            const parsed = JSON.parse(review.moderator_comment);
+            
+            // Собираем теги
+            if (parsed.tags && Array.isArray(parsed.tags)) {
+              parsed.tags.forEach((tag: string) => tags.add(tag));
+            }
+            
+            // Собираем законы
+            if (parsed.issues && Array.isArray(parsed.issues)) {
+              parsed.issues.forEach((issue: any) => {
+                if (issue.law) laws.add(issue.law);
+              });
+            }
+          } catch (e) {
+            // Игнорируем ошибки парсинга
+          }
+        }
+        
+        // Также извлекаем теги и законы из результатов автомодерации
+        if (review.auto_moderation_result) {
+          // Если auto_moderation_result является строкой (JSON), пробуем распарсить
+          if (typeof review.auto_moderation_result === 'string') {
+            try {
+              const parsed = JSON.parse(review.auto_moderation_result);
+              
+              // Собираем теги
+              if (parsed.tags && Array.isArray(parsed.tags)) {
+                parsed.tags.forEach((tag: string) => tags.add(tag));
+              }
+              
+              // Собираем законы
+              if (parsed.issues && Array.isArray(parsed.issues)) {
+                parsed.issues.forEach((issue: any) => {
+                  if (issue.law) laws.add(issue.law);
+                });
+              }
+            } catch (e) {
+              // Игнорируем ошибки парсинга
+            }
+          } else if (typeof review.auto_moderation_result === 'object') {
+            // Если auto_moderation_result уже объект
+            const result = review.auto_moderation_result;
+            
+            // Собираем теги
+            if (result.tags && Array.isArray(result.tags)) {
+              result.tags.forEach((tag: string) => tags.add(tag));
+            }
+            
+            // Собираем законы
+            if (result.issues && Array.isArray(result.issues)) {
+              result.issues.forEach((issue: any) => {
+                if (issue.law) laws.add(issue.law);
+              });
+            }
+          }
+        }
+      });
+      
+      return { 
+        uniqueTags: Array.from(tags).sort(), 
+        uniqueLaws: Array.from(laws).sort() 
+      };
+    }, [reviews]);
+    
+    // Доступные часовые пояса
+    const timeZones = [
+      { value: 0, label: 'UTC+0' },
+      { value: 1, label: 'UTC+1' },
+      { value: 2, label: 'UTC+2' },
+      { value: 3, label: 'UTC+3 (Москва)' },
+      { value: 4, label: 'UTC+4' },
+      { value: 5, label: 'UTC+5' },
+      { value: 6, label: 'UTC+6' },
+      { value: 7, label: 'UTC+7' },
+      { value: 8, label: 'UTC+8' },
+      { value: 9, label: 'UTC+9' },
+      { value: 10, label: 'UTC+10' },
+      { value: 11, label: 'UTC+11' },
+      { value: 12, label: 'UTC+12' },
+    ];
+    
+    return (
+      <div className="bg-muted/20 rounded-md p-3 mb-4 space-y-3">
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Статус:</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              variant={statusFilter === 'all' ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setStatusFilter('all')}
+            >
+              Все статусы
+            </Button>
+            <Button 
+              variant={statusFilter === 'pending' ? "default" : "outline"} 
+              size="sm"
+              className="border-yellow-400 text-yellow-600 hover:bg-yellow-50"
+              onClick={() => setStatusFilter('pending')}
+            >
+              <AlertTriangle className="h-3 w-3 mr-1" /> На модерации
+            </Button>
+            <Button 
+              variant={statusFilter === 'approved' ? "default" : "outline"} 
+              size="sm"
+              className="border-green-400 text-green-600 hover:bg-green-50"
+              onClick={() => setStatusFilter('approved')}
+            >
+              <CheckCircle className="h-3 w-3 mr-1" /> Одобренные
+            </Button>
+            <Button 
+              variant={statusFilter === 'rejected' ? "default" : "outline"} 
+              size="sm"
+              className="border-red-400 text-red-600 hover:bg-red-50"
+              onClick={() => setStatusFilter('rejected')}
+            >
+              <XCircle className="h-3 w-3 mr-1" /> Отклоненные
+            </Button>
+          </div>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Время создания:</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              variant={dateFilter === 'all' ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setDateFilter('all')}
+            >
+              Любое время
+            </Button>
+            <Button 
+              variant={dateFilter === 'today' ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setDateFilter('today')}
+            >
+              Сегодня
+            </Button>
+            <Button 
+              variant={dateFilter === 'last1hour' ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setDateFilter('last1hour')}
+            >
+              За час
+            </Button>
+            <Button 
+              variant={dateFilter === 'last5min' ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setDateFilter('last5min')}
+            >
+              За 5 минут
+            </Button>
+          </div>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Сортировка:</span>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant={sortOption === 'newest' ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setSortOption('newest')}
+            >
+              Сначала новые
+            </Button>
+            <Button 
+              variant={sortOption === 'oldest' ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setSortOption('oldest')}
+            >
+              Сначала старые
+            </Button>
+          </div>
+        </div>
+        
+        {/* Фильтр по тегам */}
+        {uniqueTags.length > 0 && (
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div className="flex items-center gap-2">
+              <Tag className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Теги AI:</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                variant={tagFilter === 'all' ? "default" : "outline"} 
+                size="sm"
+                onClick={() => setTagFilter('all')}
+              >
+                Все теги
+              </Button>
+              {uniqueTags.map((tag, index) => (
+                <Button 
+                  key={index}
+                  variant={tagFilter === tag ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => setTagFilter(tag)}
+                >
+                  {tag}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Фильтр по законам */}
+        {uniqueLaws.length > 0 && (
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Законы:</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                variant={lawFilter === 'all' ? "default" : "outline"} 
+                size="sm"
+                onClick={() => setLawFilter('all')}
+              >
+                Все законы
+              </Button>
+              {uniqueLaws.map((law, index) => (
+                <Button 
+                  key={index}
+                  variant={lawFilter === law ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => setLawFilter(law)}
+                >
+                  {law}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Фильтр по уровню уверенности AI */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <div className="flex items-center gap-2">
+            <ActivitySquare className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Уверенность AI:</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              variant={confidenceFilter === 'all' ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setConfidenceFilter('all')}
+            >
+              Все уровни
+            </Button>
+            <Button 
+              variant={confidenceFilter === 'high' ? "default" : "outline"} 
+              size="sm"
+              className="border-green-400 text-green-600 hover:bg-green-50"
+              onClick={() => setConfidenceFilter('high')}
+            >
+              <ThumbsUp className="h-3 w-3 mr-1" /> Высокая (&gt;80%)
+            </Button>
+            <Button 
+              variant={confidenceFilter === 'medium' ? "default" : "outline"} 
+              size="sm"
+              className="border-yellow-400 text-yellow-600 hover:bg-yellow-50"
+              onClick={() => setConfidenceFilter('medium')}
+            >
+              <ThumbsUp className="h-3 w-3 mr-1" /> Средняя (50-80%)
+            </Button>
+            <Button 
+              variant={confidenceFilter === 'low' ? "default" : "outline"} 
+              size="sm"
+              className="border-red-400 text-red-600 hover:bg-red-50"
+              onClick={() => setConfidenceFilter('low')}
+            >
+              <ThumbsDown className="h-3 w-3 mr-1" /> Низкая (&lt;50%)
+            </Button>
+          </div>
+        </div>
+        
+        {/* Настройка часового пояса */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Часовой пояс:</span>
+          </div>
+          <Select value={timeZoneOffset.toString()} onValueChange={(value) => setTimeZoneOffset(parseInt(value))}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Выберите часовой пояс" />
+            </SelectTrigger>
+            <SelectContent>
+              {timeZones.map((tz) => (
+                <SelectItem key={tz.value} value={tz.value.toString()}>
+                  {tz.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="flex items-center gap-2 relative">
+          <Search className="h-4 w-4 absolute left-2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Поиск по тексту отзыва или имени пользователя..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-8 h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+          {searchQuery && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute right-1 h-7 w-7"
+              onClick={() => setSearchQuery('')}
+            >
+              <XCircle className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        
+        {/* Кнопка сброса фильтров */}
+        {isAnyFilterActive && (
+          <div className="flex justify-end pt-1">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={resetAllFilters}
+              className="text-xs"
+            >
+              <RefreshCw className="h-3 w-3 mr-2" /> Сбросить все фильтры
+            </Button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Сбросить все фильтры
+  const resetAllFilters = () => {
+    setStatusFilter('all');
+    setDateFilter('all');
+    setSortOption('newest');
+    setSearchQuery('');
+    setTagFilter('all');
+    setLawFilter('all');
+    setConfidenceFilter('all');
+  };
+  
+  // Проверка, активен ли хоть один фильтр
+  const isAnyFilterActive = useMemo(() => {
+    return statusFilter !== 'all' || 
+           dateFilter !== 'all' || 
+           searchQuery !== '' || 
+           tagFilter !== 'all' || 
+           lawFilter !== 'all' || 
+           confidenceFilter !== 'all' ||
+           sortOption !== 'newest';
+  }, [statusFilter, dateFilter, searchQuery, tagFilter, lawFilter, confidenceFilter, sortOption]);
+
+  // Выделяем User Tab View в отдельный компонент для предотвращения перерисовки при обновлении отзывов
+  const UserTabView = React.memo(({ movieId, movieTitle, onReviewSubmitted, formValues, insertTemplate }: { 
+    movieId: string, 
+    movieTitle: string, 
+    onReviewSubmitted: () => void,
+    formValues: { title: string, text: string, rating: number },
+    insertTemplate: (type: keyof typeof REVIEW_TEMPLATES) => void
+  }) => {
+    return (
+      <Tabs value={activeUserTab} onValueChange={setActiveUserTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="write" className="flex items-center gap-2">
+            Написать отзыв
+          </TabsTrigger>
+          <TabsTrigger value="my-reviews" className="flex items-center gap-2">
+            <MessageCircle className="h-4 w-4" />
+            <span>Отзывы ({userReviews.length})</span>
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="write">
+          <Card>
+            <CardHeader>
+              <CardTitle>Написать отзыв о фильме "{movieTitle}"</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Быстрая вставка готовых шаблонов отзывов:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => insertTemplate('positive')}
+                    className="flex items-center gap-1"
+                  >
+                    <ThumbsUp className="h-3 w-3" /> Позитивный
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => insertTemplate('negative')}
+                    className="flex items-center gap-1 text-red-500"
+                  >
+                    <AlertTriangle className="h-3 w-3" /> Негативный
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => insertTemplate('short')}
+                    className="flex items-center gap-1"
+                  >
+                    Короткий текст
+                  </Button>
+                </div>
+              </div>
+              
+              <ReviewForm 
+                movieId={movieId} 
+                movieTitle={movieTitle} 
+                onReviewSubmitted={onReviewSubmitted}
+                initialValues={formValues}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="my-reviews" className="space-y-4">
+          {/* Контент для вкладки "Мои отзывы" */}
+          <UserReviews 
+            reviews={userReviews} 
+            isLoading={loadingReviews} 
+            error={error} 
+            onRefresh={() => fetchReviews(true)} 
+            isRefreshing={isRefreshing}
+            formatDate={formatDate}
+          />
+        </TabsContent>
+      </Tabs>
+    );
+  }, (prevProps, nextProps) => {
+    // Компонент нужно перерендеривать, если изменились важные данные формы
+    return prevProps.formValues.title === nextProps.formValues.title && 
+           prevProps.formValues.text === nextProps.formValues.text &&
+           prevProps.formValues.rating === nextProps.formValues.rating;
+  });
+
+  // Компонент для отображения списка отзывов пользователя
+  const UserReviews = useMemo(() => {
+    // Функция для получения обработанных отзывов с учетом localStorage
+    const getProcessedReviews = () => {
+      // Пытаемся получить данные из localStorage
+      let localStorageData = {};
+      try {
+        const savedData = localStorage.getItem('reviewsProcessedData');
+        if (savedData) {
+          localStorageData = JSON.parse(savedData);
+        }
+      } catch (e) {
+        console.error('Ошибка при получении данных из localStorage:', e);
+      }
+      
+      return reviews.map(review => {
+        // Если отзыв уже обработан, используем его как есть
+        if (review.auto_moderation_processed) {
+          return review;
+        }
+        
+        // Если есть данные в localStorage, применяем их
+        if (localStorageData[review._id]) {
+          return {
+            ...review,
+            auto_moderation_processed: localStorageData[review._id].auto_moderation_processed,
+            moderator_comment_processed: localStorageData[review._id].moderator_comment_processed
+          };
+        }
+        
+        // В крайнем случае применяем обработку
+        return prepareReviewModeration(review);
+      });
+    };
+    
+    // Получаем обработанные отзывы
+    const processedReviews = getProcessedReviews();
+    
+    // Фильтруем отзывы по статусам
+    const pendingReviews = processedReviews.filter(review => review.status === "pending");
+    const approvedReviews = processedReviews.filter(review => review.status === "approved");
+    const rejectedReviews = processedReviews.filter(review => review.status === "rejected");
+    
+    return (
+      <>
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold">Отзывы</h2>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onRefresh}
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Обновление...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Обновить
+              </>
+            )}
+          </Button>
+        </div>
+        
+        <Separator />
+        
+        {isLoading ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Загрузка отзывов...
+          </div>
+        ) : error ? (
+          <div className="text-center py-8 text-red-500">
+            {error}
+          </div>
+        ) : reviews.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            У вас пока нет отзывов. Напишите первый отзыв!
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+            {/* Одобренные отзывы */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-medium">Одобренные</h3>
+                <Badge className="bg-green-500/10 text-green-500 border-green-500/20">{approvedReviews.length}</Badge>
+              </div>
+              {approvedReviews.length > 0 ? (
+                <div className="space-y-4">
+                  {approvedReviews.map((processedReview) => (
+                      <Card key={processedReview._id}>
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-semibold">{processedReview.title}</h3>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {formatDate(processedReview.created_at)}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {getStatusBadge(processedReview.status)}
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="whitespace-pre-line text-sm">
+                            {processedReview.review_text}
+                          </div>
+                          
+                          {/* Отображаем результаты автомодерации - используем обработанные данные */}
+                          {processedReview.auto_moderation_processed && (
+                            <div className="mt-3">
+                              <RenderModerationComment comment={processedReview.auto_moderation_processed} />
+                            </div>
+                          )}
+                          
+                          {/* Отображаем комментарий модератора - используем обработанные данные */}
+                          {processedReview.moderator_comment_processed ? (
+                            <div className="mt-3">
+                              <RenderModerationComment comment={processedReview.moderator_comment_processed} />
+                            </div>
+                          ) : processedReview.moderator_comment && (
+                            <div className="mt-3">
+                              <RenderModerationComment comment={processedReview.moderator_comment} />
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-muted-foreground bg-muted/20 rounded-md">
+                  Отзывов нет
+                </div>
+              )}
+            </div>
+            
+            {/* Отклоненные отзывы */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-medium">Отклоненные</h3>
+                <Badge className="bg-red-500/10 text-red-500 border-red-500/20">{rejectedReviews.length}</Badge>
+              </div>
+              {rejectedReviews.length > 0 ? (
+                <div className="space-y-4">
+                  {rejectedReviews.map((processedReview) => (
+                      <Card key={processedReview._id}>
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-semibold">{processedReview.title}</h3>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {formatDate(processedReview.created_at)}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {getStatusBadge(processedReview.status)}
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="whitespace-pre-line text-sm">
+                            {processedReview.review_text}
+                          </div>
+                          
+                          {/* Отображаем причину отклонения */}
+                          {processedReview.status === 'rejected' && processedReview.rejection_reason && (
+                            <div className="mt-2 text-xs bg-red-500/5 border border-red-500/20 p-2 rounded-md">
+                              <div className="font-medium text-red-500">Причина отклонения:</div>
+                              <div>{processedReview.rejection_reason}</div>
+                            </div>
+                          )}
+                          
+                          {/* Отображаем результаты автомодерации - используем обработанные данные */}
+                          {processedReview.auto_moderation_processed && (
+                            <div className="mt-3">
+                              <RenderModerationComment comment={processedReview.auto_moderation_processed} />
+                            </div>
+                          )}
+                          
+                          {/* Отображаем комментарий модератора - используем обработанные данные */}
+                          {processedReview.moderator_comment_processed ? (
+                            <div className="mt-3">
+                              <RenderModerationComment comment={processedReview.moderator_comment_processed} />
+                            </div>
+                          ) : processedReview.moderator_comment && (
+                            <div className="mt-3">
+                              <RenderModerationComment comment={processedReview.moderator_comment} />
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-muted-foreground bg-muted/20 rounded-md">
+                  Отзывов нет
+                </div>
+              )}
+            </div>
+            
+            {/* Ожидающие модерации отзывы */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-medium">Ожидают модерации</h3>
+                <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">{pendingReviews.length}</Badge>
+              </div>
+              {pendingReviews.length > 0 ? (
+                <div className="space-y-4">
+                  {pendingReviews.map((processedReview) => (
+                      <Card key={processedReview._id}>
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-semibold">{processedReview.title}</h3>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {formatDate(processedReview.created_at)}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {getStatusBadge(processedReview.status)}
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="whitespace-pre-line text-sm">
+                            {processedReview.review_text}
+                          </div>
+                          
+                          {/* Отображаем результаты автомодерации - используем обработанные данные */}
+                          {processedReview.auto_moderation_processed && (
+                            <div className="mt-3">
+                              <RenderModerationComment comment={processedReview.auto_moderation_processed} />
+                            </div>
+                          )}
+                          
+                          {/* Отображаем комментарий модератора - используем обработанные данные */}
+                          {processedReview.moderator_comment_processed ? (
+                            <div className="mt-3">
+                              <RenderModerationComment comment={processedReview.moderator_comment_processed} />
+                            </div>
+                          ) : processedReview.moderator_comment && (
+                            <div className="mt-3">
+                              <RenderModerationComment comment={processedReview.moderator_comment} />
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-muted-foreground bg-muted/20 rounded-md">
+                  Отзывов нет
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }, [reviews, formatDate, isRefreshing, onRefresh, isLoading, error, getStatusBadge, handleModerateReview, prepareReviewModeration]);
+
+  // Функция для обработки подтверждения возврата отзыва на модерацию
+  const handleConfirmReturnToPending = async () => {
+    if (!reviewToPending) return;
+    
+    try {
+      setIsSubmitting(true);
+      
+      // Готовим комментарий
+      const commentText = JSON.stringify({
+        status: 'pending',
+        confidence: 0.5,
+        tags: ["moderation", "pending"],
+        message: "Возвращен на повторную модерацию"
+      });
+      
+      // Формируем URL с query параметрами
+      const queryParams = new URLSearchParams({
+        status_update: 'pending',
+        moderation_comment: commentText
+      });
+      
+      // Получаем токен аутентификации
+      const token = getToken(true); // Используем true для получения токена модератора
+      
+      // Отправляем запрос с параметрами в query string
+      const response = await fetch(`/api-ugc/v1/reviews/${reviewToPending.id}/status?${queryParams.toString()}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Ошибка при возврате отзыва на модерацию: ${response.status} ${response.statusText}`);
+      }
+      
+      // Создаем обновленный отзыв
+      const reviewToUpdate = reviews.find(review => review._id === reviewToPending.id);
+      if (reviewToUpdate) {
+        const updatedReview = {
+          ...reviewToUpdate,
+          status: 'pending',
+          moderator_comment: commentText,
+          auto_moderation_processed: reviewToUpdate.auto_moderation_processed, // Явно сохраняем обработанные данные автомодерации
+          rejection_reason: undefined
+        };
+        
+        // Применяем prepareReviewModeration
+        const processedUpdatedReview = prepareReviewModeration(updatedReview);
+        
+        // Обновляем отзыв в локальном состоянии
+        setReviews(prev => prev.map(review => 
+          review._id === reviewToPending.id ? processedUpdatedReview : review
+        ));
+      }
+      
+      toast({
+        title: "Успешно",
+        description: "Отзыв возвращен на модерацию"
+      });
+    } catch (error) {
+      console.error('Ошибка при возврате отзыва на модерацию:', error);
+      toast({
+        title: "Ошибка",
+        description: `Не удалось вернуть отзыв на модерацию: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+      setPendingReviewDialogOpen(false);
+      setReviewToPending(null);
+    }
+  };
+
+  // Компонент для отображения отзывов в колонках
+  const ReviewColumns = ({ 
+    reviews, 
+    isLoading, 
+    error, 
+    formatDate, 
+    getStatusBadge, 
+    handleModerateReview,
+    setReviewToModerate,
+    setPendingReviewDialogOpen,
+    setReviewToPending 
+  }: { 
+    reviews: any[],
+    isLoading: boolean,
+    error: string | null,
+    formatDate: (dateString: string) => string,
+    getStatusBadge: (status: ReviewStatus) => JSX.Element,
+    handleModerateReview: (reviewId: string, status: 'approved' | 'rejected' | 'pending') => Promise<void>,
+    setReviewToModerate: (review: any) => void,
+    setPendingReviewDialogOpen: (open: boolean) => void,
+    setReviewToPending: (review: {id: string, title: string} | null) => void
+  }) => {
+    // Обрабатываем только отзывы, которые еще не были обработаны
+    const processedReviews = useMemo(() => reviews.map(review => {
+      // Если у отзыва уже есть обработанные данные auto_moderation_processed, используем как есть
+      if (review.auto_moderation_processed) {
+        return review;
+      }
+      // Иначе обрабатываем через prepareReviewModeration
+      return prepareReviewModeration(review);
+    }), [reviews]);
+    
+    // Фильтруем отзывы по статусам, используя предобработанные данные
+    const pendingReviews = processedReviews.filter(review => review.status === "pending");
+    const approvedReviews = processedReviews.filter(review => review.status === "approved");
+    const rejectedReviews = processedReviews.filter(review => review.status === "rejected");
+    
+    if (isLoading) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          Загрузка отзывов...
+        </div>
+      );
+    }
+    
+    if (error) {
+      return (
+        <div className="text-center py-8 text-red-500">
+          {error}
+        </div>
+      );
+    }
+    
+    if (reviews.length === 0) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          Нет отзывов для модерации
+        </div>
+      );
+    }
+    
+    // Функция для рендеринга карточки отзыва
+    const renderReviewCard = (review: any) => {
+      return (
+        <Card key={review._id} className="mb-3">
+          <CardHeader className="pb-2">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-semibold">{review.title}</h3>
+                <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-1">
+                  <span>{formatDate(review.created_at)}</span>
+                  <span>•</span>
+                  <span>{review.user_name || 'Анонимный пользователь'}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {getStatusBadge(review.status)}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="whitespace-pre-line text-sm">
+              {review.review_text}
+            </div>
+            
+            {/* Отображаем причину отклонения */}
+            {review.status === 'rejected' && review.rejection_reason && (
+              <div className="mt-2 text-xs bg-red-500/5 border border-red-500/20 p-2 rounded-md">
+                <div className="font-medium text-red-500">Причина отклонения:</div>
+                <div>{review.rejection_reason}</div>
+              </div>
+            )}
+            
+            {/* Отображаем результат автомодерации - используем уже обработанные данные */}
+            {review.auto_moderation_processed && (
+              <div className="mt-3">
+                <RenderModerationComment comment={review.auto_moderation_processed} />
+              </div>
+            )}
+            
+            {/* Отображаем комментарий модератора - используем уже обработанные данные */}
+            {review.moderator_comment_processed ? (
+              <div className="mt-3">
+                <RenderModerationComment comment={review.moderator_comment_processed} />
+              </div>
+            ) : review.moderator_comment && (
+              <div className="mt-3">
+                <RenderModerationComment comment={review.moderator_comment} />
+              </div>
+            )}
+          </CardContent>
+          <CardFooter>
+            <div className="flex w-full justify-between">
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={() => setReviewToModerate(review)}
+              >
+                Модерировать
+              </Button>
+              {review.status !== 'pending' && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="border-yellow-400 text-yellow-600 hover:bg-yellow-50"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (setPendingReviewDialogOpen && setReviewToPending) {
+                      setReviewToPending({
+                        id: review._id,
+                        title: review.title
+                      });
+                      setPendingReviewDialogOpen(true);
+                    } else {
+                      handleModerateReview(review._id, 'pending');
+                    }
+                  }}
+                >
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Вернуть на модерацию
+                </Button>
+              )}
+            </div>
+          </CardFooter>
+        </Card>
+      );
+    };
+    
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Колонка ожидающих модерации */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-medium">На модерации</h3>
+            <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+              {pendingReviews.length}
+            </Badge>
+          </div>
+          {pendingReviews.length > 0 ? (
+            <div>
+              {pendingReviews.map(review => renderReviewCard(review))}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-muted-foreground bg-muted/20 rounded-md">
+              Отзывов нет
+            </div>
+          )}
+        </div>
+        
+        {/* Колонка одобренных отзывов */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-medium">Одобренные</h3>
+            <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+              {approvedReviews.length}
+            </Badge>
+          </div>
+          {approvedReviews.length > 0 ? (
+            <div>
+              {approvedReviews.map(review => renderReviewCard(review))}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-muted-foreground bg-muted/20 rounded-md">
+              Отзывов нет
+            </div>
+          )}
+        </div>
+        
+        {/* Колонка отклоненных отзывов */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-medium">Отклоненные</h3>
+            <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">
+              {rejectedReviews.length}
+            </Badge>
+          </div>
+          {rejectedReviews.length > 0 ? (
+            <div>
+              {rejectedReviews.map(review => renderReviewCard(review))}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-muted-foreground bg-muted/20 rounded-md">
+              Отзывов нет
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Вид модератора
+  const ModeratorTabView = React.memo(({
+    reviews,
+    isLoading,
+    isRefreshing,
+    error,
+    pendingReviews,
+    fetchReviews,
+    formatDate,
+    getStatusBadge,
+    handleModerateReview,
+    setReviewToModerate,
+    reviewToModerate,
+    setPendingReviewDialogOpen,
+    setReviewToPending
+  }: {
+    reviews: any[],
+    isLoading: boolean,
+    isRefreshing: boolean,
+    error: string | null,
+    pendingReviews: any[],
+    fetchReviews: (showLoading?: boolean) => Promise<void>,
+    formatDate: (dateString: string) => string,
+    getStatusBadge: (status: ReviewStatus) => JSX.Element,
+    handleModerateReview: (reviewId: string, status: 'approved' | 'rejected' | 'pending') => Promise<void>,
+    setReviewToModerate: (review: any) => void,
+    reviewToModerate: any,
+    setPendingReviewDialogOpen: (open: boolean) => void,
+    setReviewToPending: (review: {id: string, title: string} | null) => void
+  }) => {
+    
+    return (
+      <>
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold transition-all duration-300">Панель модератора</h2>
+          <div className="flex items-center gap-2">
+            <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 transition-all duration-300">
+              {pendingReviews.length} ожидают проверки
+            </Badge>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => fetchReviews(true)}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 transition-all duration-200"
+            >
+              <RotateCw className={`h-4 w-4 transition-all ${isRefreshing ? 'animate-spin' : ''}`} />
+              Обновить
+            </Button>
+          </div>
+        </div>
+        
+        <Separator className="transition-all duration-300" />
+        
+        {/* Добавляем панель фильтров */}
+        <FilterSortPanel />
+        
+        {/* Используем новый компонент для отображения отзывов */}
+        <ReviewColumns 
+          reviews={reviews}
+          isLoading={isLoading}
+          error={error}
+          formatDate={formatDate}
+          getStatusBadge={getStatusBadge}
+          handleModerateReview={handleModerateReview}
+          setReviewToModerate={setReviewToModerate}
+          setPendingReviewDialogOpen={setPendingReviewDialogOpen}
+          setReviewToPending={setReviewToPending}
+        />
+      </>
+    );
+  }, (prevProps, nextProps) => {
+    // Мемоизируем компонент, чтобы избежать лишних рендеров
+    return prevProps.reviews === nextProps.reviews &&
+           prevProps.isLoading === nextProps.isLoading && 
+           prevProps.error === nextProps.error;
+  });
+
+  // Обработка результатов модерации при отображении отзыва
+  const prepareReviewModeration = (review: any) => {
+    // Используем уже существующие обработанные данные автомодерации, если они есть
+    let autoModeration = review.auto_moderation_processed || null;
+    
+    // Проверяем, есть ли данные в localStorage для этого отзыва
+    try {
+      if (!autoModeration) {
+        const savedData = localStorage.getItem('reviewsProcessedData');
+        if (savedData) {
+          const localData = JSON.parse(savedData);
+          if (localData[review._id]?.auto_moderation_processed) {
+            autoModeration = localData[review._id].auto_moderation_processed;
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Ошибка при получении данных из localStorage:', e);
+    }
+    
+    // Если обработанных данных нет, обрабатываем auto_moderation_result
+    if (!autoModeration && review.auto_moderation_result) {
+      // Если это строка, пробуем распарсить
+      if (typeof review.auto_moderation_result === 'string') {
+        try {
+          autoModeration = JSON.parse(review.auto_moderation_result);
+        } catch (e) {
+          autoModeration = review.auto_moderation_result;
+        }
+      } else {
+        autoModeration = review.auto_moderation_result;
+      }
+    }
+    
+    // Используем уже существующие обработанные данные комментария модератора, если они есть
+    let modComment = review.moderator_comment_processed || null;
+    
+    // Проверяем, есть ли данные комментария модератора в localStorage
+    try {
+      if (!modComment) {
+        const savedData = localStorage.getItem('reviewsProcessedData');
+        if (savedData) {
+          const localData = JSON.parse(savedData);
+          if (localData[review._id]?.moderator_comment_processed) {
+            modComment = localData[review._id].moderator_comment_processed;
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Ошибка при получении комментария модератора из localStorage:', e);
+    }
+    
+    // Если обработанных данных нет, обрабатываем moderator_comment
+    if (!modComment && review.moderator_comment) {
+      // Если это строка, пробуем распарсить
+      if (typeof review.moderator_comment === 'string') {
+        try {
+          modComment = JSON.parse(review.moderator_comment);
+        } catch (e) {
+          modComment = review.moderator_comment;
+        }
+      } else {
+        modComment = review.moderator_comment;
+      }
+    }
+    
+    return {
+      ...review,
+      auto_moderation_processed: autoModeration,
+      moderator_comment_processed: modComment
+    };
+  };
+
+  return (
+    <div className="space-y-8">
+      <Card>
+        <CardHeader>
+          <CardTitle>Демонстрация системы модерации отзывов</CardTitle>
+          <CardDescription>
+            Эта страница демонстрирует функционал модерации пользовательских отзывов. 
+            Вы можете использовать как вид пользователя (для отправки отзывов), так и вид модератора (для проверки отзывов).
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <TabsList className="grid grid-cols-2">
+              <TabsTrigger value="user" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Вид пользователя
+              </TabsTrigger>
+              <TabsTrigger value="moderator" className="flex items-center gap-2">
+                <LockKeyhole className="h-4 w-4" />
+                Вид модератора
+              </TabsTrigger>
+            </TabsList>
+            
+            {/* Вид пользователя - мемоизированный компонент с передачей formValues */}
+            <TabsContent value="user" className="space-y-4">
+              <UserTabView 
+                movieId={DEMO_MOVIE_ID}
+                movieTitle={DEMO_MOVIE_TITLE}
+                onReviewSubmitted={handleReviewSubmitted}
+                formValues={formValues}
+                insertTemplate={insertReviewTemplate}
+              />
+            </TabsContent>
+            
+            {/* Вид модератора */}
+            <TabsContent value="moderator" className="space-y-4">
+              {reviewToModerate ? (
+                <div className="transition-opacity duration-300">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Модерация отзыва</CardTitle>
+                      <CardDescription>Проверьте отзыв и примите решение</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <h3 className="font-semibold mb-1">{reviewToModerate.title}</h3>
+                        <div className="text-xs text-muted-foreground mb-2">
+                          Написан: {formatDate(reviewToModerate.created_at)} | Пользователь: {reviewToModerate.user_name}
+                        </div>
+                        <div className="p-4 bg-muted/30 rounded-md whitespace-pre-line text-sm">
+                          {reviewToModerate.review_text}
+                        </div>
+                      </div>
+                      
+                      {reviewToModerate.auto_moderation_result && (
+                        <div className="p-3 border rounded-md bg-blue-500/5 border-blue-500/20">
+                          <h4 className="text-sm font-medium text-blue-500 mb-1">Результат автомодерации:</h4>
+                          <div className="text-xs space-y-2">
+                            <div>
+                              <span className="font-medium">Уверенность:</span> {Math.round((reviewToModerate.auto_moderation_result.confidence || 0) * 100)}%
+                            </div>
+                            {reviewToModerate.auto_moderation_result.issues && reviewToModerate.auto_moderation_result.issues.length > 0 && (
+                              <div>
+                                <span className="font-medium">Обнаруженные проблемы:</span>
+                                <ul className="list-disc list-inside mt-1 space-y-1">
+                                  {reviewToModerate.auto_moderation_result.issues.map((issue: any, idx: number) => (
+                                    <li key={idx}>
+                                      <span className="font-medium">{issue.category}:</span> {issue.description}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="moderator-comment">Комментарий модератора</Label>
+                        <Textarea
+                          id="moderator-comment"
+                          value={moderatorComment}
+                          onChange={(e) => setModeratorComment(e.target.value)}
+                          placeholder="Укажите комментарий для пользователя. Обязательно при отклонении отзыва."
+                          rows={3}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-between">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setReviewToModerate(null)}
+                        disabled={isSubmitting}
+                      >
+                        Отмена
+                      </Button>
+                      <div className="flex gap-2">
+                        {/* Кнопка для возврата на модерацию (для уже обработанных отзывов) */}
+                        {reviewToModerate.status !== 'pending' && (
+                          <Button 
+                            variant="outline" 
+                            onClick={() => handleModerateReview(reviewToModerate._id, 'pending')}
+                            disabled={isSubmitting}
+                            className="border-yellow-400 text-yellow-600 hover:bg-yellow-50"
+                          >
+                            <AlertTriangle className="h-4 w-4 mr-2" />
+                            Вернуть на модерацию
+                          </Button>
+                        )}
+                        <Button 
+                          variant="destructive" 
+                          onClick={() => handleModerateReview(reviewToModerate._id, 'rejected')}
+                          disabled={isSubmitting || !moderatorComment.trim()}
+                        >
+                          {isSubmitting ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            <XCircle className="h-4 w-4 mr-2" />
+                          )}
+                          Отклонить
+                        </Button>
+                        <Button 
+                          variant="default" 
+                          onClick={() => handleModerateReview(reviewToModerate._id, 'approved')}
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                          )}
+                          Одобрить
+                        </Button>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                </div>
+              ) : (
+                <ModeratorTabView 
+                  reviews={getFilteredReviews()}
+                  isLoading={loadingReviews}
+                  isRefreshing={isRefreshing}
+                  error={error}
+                  pendingReviews={reviews.filter(review => review.status === "pending")}
+                  fetchReviews={fetchReviews}
+                  formatDate={formatDate}
+                  getStatusBadge={getStatusBadge}
+                  handleModerateReview={handleModerateReview}
+                  setReviewToModerate={setReviewToModerate}
+                  reviewToModerate={reviewToModerate}
+                  setPendingReviewDialogOpen={setPendingReviewDialogOpen}
+                  setReviewToPending={setReviewToPending}
+                />
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+      
+      {/* Диалог подтверждения возврата на модерацию */}
+      <AlertDialog open={pendingReviewDialogOpen} onOpenChange={setPendingReviewDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Вернуть отзыв на модерацию?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы собираетесь вернуть отзыв "{reviewToPending?.title}" на модерацию.
+              Это действие отменит предыдущее решение модератора.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setReviewToPending(null)}>Отмена</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmReturnToPending}>Подтвердить</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  )
+}
+
+export default DemoPage 

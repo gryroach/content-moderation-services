@@ -1,84 +1,108 @@
 "use client"
 
-import { Star } from "lucide-react"
-import { useState } from "react"
+import { StarIcon } from "lucide-react";
+import { useState } from 'react';
 
-interface StarRatingProps {
-  rating: number
-  onRatingChange?: (rating: number) => void
-  max?: number
-  readOnly?: boolean
-  size?: "sm" | "md" | "lg"
+export interface StarRatingProps {
+  rating?: number;  // Переименовываем value в rating для соответствия с использованием
+  onRatingChange?: (value: number) => void;  // Переименовываем onChange в onRatingChange
+  max?: number;
+  size?: 'sm' | 'md' | 'lg';
+  readOnly?: boolean;
+  id?: string;
 }
 
-export function StarRating({ rating, onRatingChange, max = 5, readOnly = false, size = "md" }: StarRatingProps) {
-  const [hoverRating, setHoverRating] = useState(0)
-  const ratingId = `star-rating-${Math.random().toString(36).substring(2, 9)}`
-
-  const handleClick = (index: number) => {
-    if (!readOnly && onRatingChange) {
-      // If clicking the same star twice, clear the rating
-      if (rating === index) {
-        onRatingChange(0)
-      } else {
-        onRatingChange(index)
-      }
-    }
+export const StarRating = ({
+  rating = 0,  // Переименовываем value в rating
+  onRatingChange,  // Переименовываем onChange в onRatingChange
+  max = 5,
+  size = 'md',
+  readOnly = false,
+  id: propId
+}: StarRatingProps) => {
+  const [hoveredValue, setHoveredValue] = useState<number>(0)
+  
+  // Генерируем детерминированный ID на основе параметров компонента
+  // вместо случайного ID, чтобы избежать проблем с гидратацией
+  const generateStableId = (max: number, size: string, readOnly: boolean) => {
+    return `star-rating-${max}-${size}-${readOnly ? 'readonly' : 'editable'}`;
   }
-
-  const handleMouseEnter = (index: number) => {
-    if (!readOnly) {
-      setHoverRating(index)
-    }
-  }
-
-  const handleMouseLeave = () => {
-    if (!readOnly) {
-      setHoverRating(0)
-    }
-  }
-
+  
+  // Используем переданный извне ID или генерируем стабильный
+  const id = propId || generateStableId(max, size, readOnly);
+  
+  const stars = Array.from({ length: max }, (_, i) => i + 1)
+  
   const getSizeClass = () => {
     switch (size) {
-      case "sm":
-        return "h-4 w-4"
-      case "lg":
-        return "h-8 w-8"
+      case 'sm':
+        return 'w-4 h-4'
+      case 'lg':
+        return 'w-6 h-6'
       default:
-        return "h-6 w-6"
+        return 'w-5 h-5'
     }
   }
-
+  
+  const handleStarClick = (starValue: number) => {
+    if (readOnly) return
+    onRatingChange?.(starValue)  // Используем переименованный колбэк
+  }
+  
+  const handleStarHover = (starValue: number) => {
+    if (readOnly) return
+    setHoveredValue(starValue)
+  }
+  
+  const handleMouseLeave = () => {
+    if (readOnly) return
+    setHoveredValue(0)
+  }
+  
+  const labelText = rating === 1  // Используем переименованный prop
+    ? '1 star' 
+    : rating > 1  // Используем переименованный prop
+      ? `${rating} stars`  // Используем переименованный prop
+      : 'No rating'
+  
+  const labelId = `${id}-label`
+  const descId = `${id}-desc`
+  
   return (
-    <div className="flex" role="radiogroup" aria-labelledby={ratingId} aria-describedby={`${ratingId}-description`}>
-      <span id={ratingId} className="sr-only">
-        Rating
+    <div 
+      className="inline-flex items-center" 
+      onMouseLeave={handleMouseLeave}
+      role="group"
+      aria-labelledby={labelId}
+      aria-describedby={descId}
+    >
+      <span className="sr-only" id={labelId}>Rating</span>
+      <span className="sr-only" id={descId}>
+        {labelText}
       </span>
-      <span id={`${ratingId}-description`} className="sr-only">
-        Select a rating from 1 to {max} stars
-      </span>
-
-      {[...Array(max)].map((_, index) => {
-        const starValue = index + 1
-        const isFilled = hoverRating ? starValue <= hoverRating : starValue <= rating
-        const starId = `${ratingId}-star-${starValue}`
-
+      
+      {stars.map((starValue) => {
+        const isFilled = 
+          (hoveredValue > 0 ? hoveredValue >= starValue : rating >= starValue)  // Используем переименованный prop
+        
         return (
           <button
-            key={index}
-            id={starId}
+            key={`${id}-star-${starValue}`}
             type="button"
-            onClick={() => handleClick(starValue)}
-            onMouseEnter={() => handleMouseEnter(starValue)}
-            onMouseLeave={handleMouseLeave}
-            className={`${getSizeClass()} ${readOnly ? "cursor-default" : "cursor-pointer"} transition-colors`}
+            className={`focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring ${
+              readOnly ? 'cursor-default' : 'cursor-pointer'
+            } p-0.5`}
+            onMouseEnter={() => handleStarHover(starValue)}
+            onClick={() => handleStarClick(starValue)}
+            aria-label={`${starValue} star${starValue !== 1 ? 's' : ''}`}
             disabled={readOnly}
-            aria-checked={starValue <= rating}
-            aria-label={`${starValue} star${starValue !== 1 ? "s" : ""}`}
-            role="radio"
           >
-            <Star
-              className={`${getSizeClass()} ${isFilled ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`}
+            <StarIcon
+              className={`${getSizeClass()} ${
+                isFilled
+                  ? 'fill-yellow-400 text-yellow-400'
+                  : 'fill-transparent text-muted-foreground'
+              }`}
             />
           </button>
         )
@@ -86,4 +110,7 @@ export function StarRating({ rating, onRatingChange, max = 5, readOnly = false, 
     </div>
   )
 }
+
+// Также экспортируем компонент по умолчанию для обратной совместимости
+export default StarRating
 

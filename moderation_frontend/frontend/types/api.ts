@@ -45,6 +45,7 @@ export interface CreateReviewData {
 export interface StatusUpdate {
   status: "approved" | "rejected" | "pending"
   rejection_reason?: string
+  moderator_comment?: string | object
 }
 
 export interface AIModeration {

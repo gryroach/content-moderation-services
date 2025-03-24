@@ -24,7 +24,7 @@ class Moderator:
         Args:
             review_data: Данные отзыва
         """
-        self.combined_text = f"{review_data.title}\n\n{review_data.text}"
+        self.combined_text = f"Review title: {review_data.title}. Review text: {review_data.text}"
         self.review_data = review_data
         self.banned_stems: set[str] = {stemmer_ru.stem(word) for word in settings.moderation.banned_words} | {
             stemmer_en.stem(word) for word in settings.moderation.banned_words
